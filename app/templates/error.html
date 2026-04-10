@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Erro {{ error_code }} - OdontoSync{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 4rem 2rem;">
+    <div style="font-size: 6rem; margin-bottom: 1rem;">
+        {% if error_code == 404 %}
+        404
+        {% elif error_code == 500 %}
+        500
+        {% else %}
+        ERRO
+        {% endif %}
+    </div>
+    
+    <h1 style="font-size: 3rem; font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+        {{ error_code }}
+    </h1>
+    
+    <h2 style="font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin-bottom: 1rem;">
+        {{ error_message }}
+    </h2>
+    
+    <p style="font-size: 1rem; color: var(--text-secondary); margin-bottom: 2rem;">
+        {{ error_description }}
+    </p>
+    
+    <a href="/" style="display: inline-block; padding: 1rem 2rem; background-color: var(--accent-primary); 
+                      color: white; text-decoration: none; border-radius: 8px; font-weight: 600; 
+                      transition: var(--transition);">
+        Voltar para a Agenda
+    </a>
+</div>
+{% endblock %}

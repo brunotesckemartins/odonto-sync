@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Reorganização - OdontoSync{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Reorganização de Agenda</h1>
+    <p class="page-subtitle">Gestão de consultas de alto risco - {{ data }}</p>
+</div>
+
+{% if consultas %}
+<div class="alert alert-warning">
+    <strong>{{ consultas|length }} consulta(s)</strong> identificadas com alto risco de falta. Recomenda-se buscar substitutos.
+</div>
+
+<div class="cards-grid">
+    {% for consulta in consultas %}
+    <div class="card">
+        <div class="card-title">
+            {{ consulta.horario }} - {{ consulta.nome }}
+        </div>
+        <div class="card-content">
+            <p><strong>Procedimento:</strong> {{ consulta.procedimento }}</p>
+            <p><strong>Tipo:</strong> {{ consulta.tipo_pagamento }}</p>
+            <p><strong>Faltas Anteriores:</strong> {{ consulta.faltas_anteriores }}</p>
+            
+            <div style="margin: 1rem 0;">
+                <strong>Probabilidade de Falta: {{ consulta.risco.probabilidade }}%</strong>
+                <div class="progress-bar">
+                    <div class="progress-fill danger" style="width: {{ consulta.risco.probabilidade }}%"></div>
+                </div>
+            </div>
+            
+            <div style="background-color: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; margin: 1rem 0; font-size: 0.875rem;">
+                {{ consulta.risco.recomendacao }}
+            </div>
+            
+            <button onclick="buscarSubstitutos({{ consulta.id }})" style="width: 100%; margin-top: 1rem;">
+                Buscar Substitutos
+            </button>
+            
+            <div id="substitutos-{{ consulta.id }}" style="display:none; margin-top: 1rem;">
+                <!-- Substitutos serão carregados aqui via JavaScript -->
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="alert alert-success">
+    <strong>Excelente!</strong> Não há consultas de alto risco no momento.
+</div>
+{% endif %}
+
+<style>
+.substitutos-list {
+    margin-top: 1rem;
+}
+
+.substitutos-list h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.substituto-card {
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border-color);
+}
+
+.substituto-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.substituto-header strong {
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.substituto-body {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.substituto-body p {
+    margin: 0.5rem 0;
+}
+
+.substituto-body .justificativa {
+    background-color: var(--bg-tertiary);
+    padding: 0.5rem;
+    border-radius: 4px;
+    margin: 0.75rem 0;
+    font-style: italic;
+}
+
+.substituto-card button {
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+{% endblock %}

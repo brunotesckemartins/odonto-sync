@@ -1,0 +1,17 @@
+services:
+  odontosync:
+    build: .
+    container_name: odontosync
+    ports:
+      - "5000:5000"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-docker-secret-key}
+      DEBUG: ${DEBUG:-False}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      WEATHER_API_KEY: ${WEATHER_API_KEY:-}
+      USE_WEATHER_API: ${USE_WEATHER_API:-False}
+      USE_AI_SUGGESTIONS: ${USE_AI_SUGGESTIONS:-True}
+    volumes:
+      - ./dados:/app/dados
+      - ./modelo:/app/modelo
+    restart: unless-stopped

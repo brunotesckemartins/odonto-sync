@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Simulação - OdontoSync{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Simulador de Risco</h1>
+    <p class="page-subtitle">Simule risco por paciente da base ou ajuste manualmente os parâmetros</p>
+</div>
+
+{% if resultado %}
+<div class="result-card">
+    <h3 class="result-title">Resultado da Simulação</h3>
+
+    {% if resultado.paciente %}
+    <div class="result-patient">
+        <strong>Paciente:</strong> {{ resultado.paciente.nome }} ({{ resultado.paciente.id }})
+    </div>
+    {% endif %}
+    
+    <div class="result-centered">
+        <div class="result-probability" style="color: var(--{{ resultado.cor }});">
+            {{ resultado.probabilidade }}%
+        </div>
+        <span class="badge badge-{{ resultado.cor }} result-badge">
+            {{ resultado.categoria }} Risco
+        </span>
+    </div>
+    
+    <div class="result-recommendation">
+        {{ resultado.recomendacao }}
+    </div>
+</div>
+{% endif %}
+
+{% if erro %}
+<div class="alert alert-danger">
+    <strong>Erro:</strong> {{ erro }}
+</div>
+{% endif %}
+
+<div class="form-container">
+    <form method="POST" id="simulacao-form">
+        <div class="form-section">
+            <h3 class="form-section-title">Simular com paciente da base</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="paciente_id">Paciente cadastrado</label>
+                    <select name="paciente_id" id="paciente_id">
+                        <option value="">Selecionar manualmente (sem paciente da base)</option>
+                        {% for paciente in pacientes or [] %}
+                        <option value="{{ paciente.id }}" {% if paciente_selecionado == paciente.id %}selected{% endif %}>
+                            {{ paciente.nome }} ({{ paciente.id }}) · {{ paciente.tipo_pagamento }} · faltas: {{ paciente.faltas_anteriores }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-hint">Ao selecionar, os campos abaixo são preenchidos automaticamente com o histórico mais recente.</small>
+                </div>
+                <div class="form-group align-end">
+                    <button type="button" class="secondary-button" id="btn-carregar-paciente">Carregar dados do paciente</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dados do Paciente -->
+        <div class="form-section">
+            <h3 class="form-section-title">Dados do Paciente</h3>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="faixa_etaria">Faixa Etária</label>
+                    <select name="faixa_etaria" id="faixa_etaria" required>
+                        <option value="0-17" {% if dados and dados.faixa_etaria == '0-17' %}selected{% elif not dados %}{% endif %}>0-17 anos</option>
+                        <option value="18-35" {% if dados and dados.faixa_etaria == '18-35' %}selected{% endif %}>18-35 anos</option>
+                        <option value="36-60" {% if not dados or (dados and dados.faixa_etaria == '36-60') %}selected{% endif %}>36-60 anos</option>
+                        <option value="60+" {% if dados and dados.faixa_etaria == '60+' %}selected{% endif %}>60+ anos</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tipo_pagamento">Tipo de Pagamento</label>
+                    <select name="tipo_pagamento" id="tipo_pagamento" required>
+                        <option value="Particular" {% if dados and dados.tipo_pagamento == 'Particular' %}selected{% endif %}>Particular</option>
+                        <option value="Convênio" {% if not dados or (dados and dados.tipo_pagamento == 'Convênio') %}selected{% endif %}>Convênio</option>
+                        <option value="SUS" {% if dados and dados.tipo_pagamento == 'SUS' %}selected{% endif %}>SUS</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="faltas_anteriores">Faltas Anteriores</label>
+                    <input type="number" name="faltas_anteriores" id="faltas_anteriores" value="{{ dados.faltas_anteriores if dados else 0 }}" min="0" max="20" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="taxa_historica">Taxa Histórica (0.0 a 1.0)</label>
+                    <input type="number" name="taxa_historica" id="taxa_historica" value="{{ dados.taxa_historica if dados else 0.00 }}" min="0" max="1" step="0.01" required>
+                    <small class="form-hint">Use o histórico do paciente. Ex.: 0.35 = 35% de faltas.</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="tempo_como_paciente">Tempo como Paciente (meses)</label>
+                    <input type="number" name="tempo_como_paciente" id="tempo_como_paciente" value="{{ dados.tempo_como_paciente if dados else 12 }}" min="1" max="240" required>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dados da Consulta -->
+        <div class="form-section">
+            <h3 class="form-section-title">Dados da Consulta</h3>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="dia_semana">Dia da Semana</label>
+                    <select name="dia_semana" id="dia_semana" required>
+                        <option value="Monday" {% if dados and dados.dia_semana == 'Monday' %}selected{% endif %}>Segunda-feira</option>
+                        <option value="Tuesday" {% if dados and dados.dia_semana == 'Tuesday' %}selected{% endif %}>Terça-feira</option>
+                        <option value="Wednesday" {% if not dados or (dados and dados.dia_semana == 'Wednesday') %}selected{% endif %}>Quarta-feira</option>
+                        <option value="Thursday" {% if dados and dados.dia_semana == 'Thursday' %}selected{% endif %}>Quinta-feira</option>
+                        <option value="Friday" {% if dados and dados.dia_semana == 'Friday' %}selected{% endif %}>Sexta-feira</option>
+                        <option value="Saturday" {% if dados and dados.dia_semana == 'Saturday' %}selected{% endif %}>Sábado</option>
+                        <option value="Sunday" {% if dados and dados.dia_semana == 'Sunday' %}selected{% endif %}>Domingo</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="turno">Turno</label>
+                    <select name="turno" id="turno" required>
+                        <option value="Manhã" {% if dados and dados.turno == 'Manhã' %}selected{% endif %}>Manhã</option>
+                        <option value="Tarde" {% if not dados or (dados and dados.turno == 'Tarde') %}selected{% endif %}>Tarde</option>
+                        <option value="Noite" {% if dados and dados.turno == 'Noite' %}selected{% endif %}>Noite</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="procedimento">Procedimento</label>
+                    <select name="procedimento" id="procedimento" required>
+                        <option value="Consulta" {% if dados and dados.procedimento == 'Consulta' %}selected{% endif %}>Consulta</option>
+                        <option value="Limpeza" {% if not dados or (dados and dados.procedimento == 'Limpeza') %}selected{% endif %}>Limpeza</option>
+                        <option value="Obturação" {% if dados and dados.procedimento == 'Obturação' %}selected{% endif %}>Obturação</option>
+                        <option value="Extração" {% if dados and dados.procedimento == 'Extração' %}selected{% endif %}>Extração</option>
+                        <option value="Canal" {% if dados and dados.procedimento == 'Canal' %}selected{% endif %}>Canal</option>
+                        <option value="Clareamento" {% if dados and dados.procedimento == 'Clareamento' %}selected{% endif %}>Clareamento</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="antecedencia_dias">Antecedência (dias)</label>
+                    <input type="number" name="antecedencia_dias" id="antecedencia_dias" value="{{ dados.antecedencia_dias if dados else 7 }}" min="1" max="90" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="e_retorno">É Retorno?</label>
+                    <select name="e_retorno" id="e_retorno" required>
+                        <option value="0" {% if not dados or (dados and dados.e_retorno == 0) %}selected{% endif %}>Não</option>
+                        <option value="1" {% if dados and dados.e_retorno == 1 %}selected{% endif %}>Sim</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="n_remarcacoes">Número de Remarcações</label>
+                    <input type="number" name="n_remarcacoes" id="n_remarcacoes" value="{{ dados.n_remarcacoes if dados else 0 }}" min="0" max="12" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="proximo_feriado">Próximo a Feriado?</label>
+                    <select name="proximo_feriado" id="proximo_feriado" required>
+                        <option value="0" {% if not dados or (dados and dados.proximo_feriado == 0) %}selected{% endif %}>Não</option>
+                        <option value="1" {% if dados and dados.proximo_feriado == 1 %}selected{% endif %}>Sim</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="condicao_clima">Condição Climática</label>
+                    <select name="condicao_clima" id="condicao_clima" required>
+                        <option value="ensolarado" {% if not dados or (dados and dados.condicao_clima == 'ensolarado') %}selected{% endif %}>Ensolarado</option>
+                        <option value="nublado" {% if dados and dados.condicao_clima == 'nublado' %}selected{% endif %}>Nublado</option>
+                        <option value="chuvoso" {% if dados and dados.condicao_clima == 'chuvoso' %}selected{% endif %}>Chuvoso</option>
+                        <option value="tempestade" {% if dados and dados.condicao_clima == 'tempestade' %}selected{% endif %}>Tempestade</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="temperatura">Temperatura (°C)</label>
+                    <input type="number" name="temperatura" id="temperatura" value="{{ dados.temperatura if dados else 25 }}" min="10" max="45" required>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit">Simular Risco</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btn = document.getElementById('btn-carregar-paciente');
+    const pacienteSelect = document.getElementById('paciente_id');
+
+    if (!btn || !pacienteSelect) {
+        return;
+    }
+
+    const campos = [
+        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 'taxa_historica',
+        'tempo_como_paciente', 'dia_semana', 'turno', 'procedimento',
+        'antecedencia_dias', 'e_retorno', 'n_remarcacoes', 'proximo_feriado',
+        'condicao_clima', 'temperatura'
+    ];
+
+    const preencherCampos = (dados) => {
+        campos.forEach((campo) => {
+            const input = document.getElementById(campo);
+            if (!input || dados[campo] === undefined || dados[campo] === null) return;
+            input.value = dados[campo];
+        });
+    };
+
+    const carregarPaciente = async () => {
+        const pacienteId = pacienteSelect.value;
+        if (!pacienteId) {
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Carregando...';
+
+        try {
+            const response = await fetch(`/simular/paciente/${pacienteId}`);
+            const data = await response.json();
+
+            if (!response.ok || !data.sucesso) {
+                throw new Error(data.erro || 'Falha ao carregar paciente.');
+            }
+
+            preencherCampos(data.dados);
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Carregar dados do paciente';
+        }
+    };
+
+    btn.addEventListener('click', carregarPaciente);
+    pacienteSelect.addEventListener('change', carregarPaciente);
+});
+</script>
+{% endblock %}

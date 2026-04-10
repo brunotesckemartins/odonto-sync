@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Agenda - OdontoSync{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Agenda do Dia</h1>
+    <p class="page-subtitle">{{ data }}</p>
+</div>
+
+<!-- Stats Cards -->
+<div class="stats-grid">
+    <div class="stat-card info">
+        <div class="stat-label">Total</div>
+        <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-label">Alto Risco</div>
+        <div class="stat-value">{{ stats.alto_risco }}</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-label">Médio Risco</div>
+        <div class="stat-value">{{ stats.medio_risco }}</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-label">Baixo Risco</div>
+        <div class="stat-value">{{ stats.baixo_risco }}</div>
+    </div>
+</div>
+
+<!-- Alert se houver alto risco -->
+{% if stats.alto_risco > 0 %}
+<div class="alert alert-danger">
+    <strong>Atenção:</strong> {{ stats.alto_risco }} consulta(s) com alto risco de falta. Recomenda-se confirmação.
+</div>
+{% endif %}
+
+<!-- Tabela de Consultas -->
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Horário</th>
+                <th>Paciente</th>
+                <th>Procedimento</th>
+                <th>Tipo</th>
+                <th>Faltas</th>
+                <th>Antecedência</th>
+                <th>Probabilidade</th>
+                <th>Risco</th>
+                <th>Ação</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for consulta in consultas %}
+            <tr>
+                <td><strong>{{ consulta.horario }}</strong></td>
+                <td>{{ consulta.nome }}</td>
+                <td>{{ consulta.procedimento }}</td>
+                <td>{{ consulta.tipo_pagamento }}</td>
+                <td>{{ consulta.faltas_anteriores }}</td>
+                <td>{{ consulta.antecedencia_dias }} dias</td>
+                <td>
+                    <strong>{{ consulta.risco.probabilidade }}%</strong>
+                    <div class="progress-bar">
+                        <div class="progress-fill {{ consulta.risco.cor }}" 
+                             style="width: {{ consulta.risco.probabilidade }}%">
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <span class="badge badge-{{ consulta.risco.cor }}">
+                        {{ consulta.risco.categoria }}
+                    </span>
+                </td>
+                <td>
+                    {% if consulta.risco.categoria == 'Alto' %}
+                    <a href="/reorganizacao" style="font-size: 0.875rem; color: var(--accent-primary);">
+                        Ver substitutos →
+                    </a>
+                    {% else %}
+                    <span style="color: var(--text-secondary); font-size: 0.875rem;">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

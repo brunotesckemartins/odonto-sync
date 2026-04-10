@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Análise - OdontoSync{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Análise Exploratória</h1>
+    <p class="page-subtitle">Visualização de dados e métricas do modelo</p>
+</div>
+
+{% if erro %}
+<div class="alert alert-danger">
+    <strong>Erro:</strong> {{ erro }}
+</div>
+{% else %}
+
+<!-- Stats -->
+<div class="stats-grid">
+    <div class="stat-card info">
+        <div class="stat-label">Total de Registros</div>
+        <div class="stat-value">{{ stats.total_registros }}</div>
+    </div>
+    <div class="stat-card danger">
+        <div class="stat-label">Taxa de Falta</div>
+        <div class="stat-value">{{ stats.taxa_falta }}%</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-label">Compareceram</div>
+        <div class="stat-value">{{ stats.total_compareceu }}</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-label">Faltaram</div>
+        <div class="stat-value">{{ stats.total_faltas }}</div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="graficos-grid">
+    <div class="grafico">
+        <img src="data:image/png;base64,{{ graficos.falta_por_dia }}" alt="Taxa de Falta por Dia da Semana">
+    </div>
+    
+    <div class="grafico">
+        <img src="data:image/png;base64,{{ graficos.falta_por_turno }}" alt="Taxa de Falta por Turno">
+    </div>
+    
+    {% if graficos.importancia_features %}
+    <div class="grafico">
+        <img src="data:image/png;base64,{{ graficos.importancia_features }}" alt="Importância das Features">
+    </div>
+    {% endif %}
+    
+    <div class="grafico">
+        <img src="data:image/png;base64,{{ graficos.distribuicao_target }}" alt="Distribuição: Compareceu vs Faltou">
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
