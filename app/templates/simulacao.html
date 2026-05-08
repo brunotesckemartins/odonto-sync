@@ -8,6 +8,17 @@
     <p class="page-subtitle">Simule risco por paciente da base ou ajuste manualmente os parâmetros</p>
 </div>
 
+<div class="simulacao-hero">
+    <div class="simulacao-hero-card">
+        <h3>Análise preditiva de faltas</h3>
+        <p>Selecione um paciente para preencher automaticamente os dados mais recentes ou ajuste os parâmetros manualmente.</p>
+    </div>
+    <div class="simulacao-hero-card">
+        <h3>Taxa histórica amigável</h3>
+        <p>A taxa histórica agora é exibida em <strong>percentual (%)</strong> para facilitar interpretação da equipe.</p>
+    </div>
+</div>
+
 {% if resultado %}
 <div class="result-card">
     <h3 class="result-title">Resultado da Simulação</h3>
@@ -30,6 +41,21 @@
     <div class="result-recommendation">
         {{ resultado.recomendacao }}
     </div>
+
+    {% if resultado.consulta_reagendavel %}
+    <div style="margin-top: 1rem;">
+        <p>
+            <strong>Próxima consulta do paciente:</strong>
+            {{ resultado.consulta_reagendavel.data }} às {{ resultado.consulta_reagendavel.horario }}
+            ({{ resultado.consulta_reagendavel.procedimento }})
+        </p>
+        <button type="button"
+                onclick="buscarReagendamento({{ resultado.consulta_reagendavel.id }})">
+            Sugerir Reagendamento desta Consulta
+        </button>
+        <div id="reagendamento-{{ resultado.consulta_reagendavel.id }}" style="display:none; margin-top: 1rem;"></div>
+    </div>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -55,6 +81,7 @@
                         {% endfor %}
                     </select>
                     <small class="form-hint">Ao selecionar, os campos abaixo são preenchidos automaticamente com o histórico mais recente.</small>
+                    <small class="form-hint" id="paciente-carregado-status"></small>
                 </div>
                 <div class="form-group align-end">
                     <button type="button" class="secondary-button" id="btn-carregar-paciente">Carregar dados do paciente</button>
@@ -92,9 +119,9 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="taxa_historica">Taxa Histórica (0.0 a 1.0)</label>
-                    <input type="number" name="taxa_historica" id="taxa_historica" value="{{ dados.taxa_historica if dados else 0.00 }}" min="0" max="1" step="0.01" required>
-                    <small class="form-hint">Use o histórico do paciente. Ex.: 0.35 = 35% de faltas.</small>
+                    <label for="taxa_historica">Taxa Histórica de Faltas (%)</label>
+                    <input type="number" name="taxa_historica" id="taxa_historica" value="{{ ((dados.taxa_historica * 100) if dados else 0)|round(1) }}" min="0" max="100" step="0.1" required>
+                    <small class="form-hint">Exemplo: 35 significa 35% de faltas no histórico.</small>
                 </div>
                 
                 <div class="form-group">
@@ -194,8 +221,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     const btn = document.getElementById('btn-carregar-paciente');
     const pacienteSelect = document.getElementById('paciente_id');
+    const statusEl = document.getElementById('paciente-carregado-status');
 
-    if (!btn || !pacienteSelect) {
+    if (!btn || !pacienteSelect || !statusEl) {
         return;
     }
 
@@ -217,11 +245,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const carregarPaciente = async () => {
         const pacienteId = pacienteSelect.value;
         if (!pacienteId) {
+            statusEl.textContent = '';
             return;
         }
 
         btn.disabled = true;
         btn.textContent = 'Carregando...';
+        statusEl.textContent = 'Buscando histórico...';
 
         try {
             const response = await fetch(`/simular/paciente/${pacienteId}`);
@@ -232,8 +262,10 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             preencherCampos(data.dados);
+            statusEl.textContent = `Dados carregados de ${data.paciente.nome} (${data.paciente.id}).`;
         } catch (error) {
             alert(error.message);
+            statusEl.textContent = 'Não foi possível carregar os dados do paciente.';
         } finally {
             btn.disabled = false;
             btn.textContent = 'Carregar dados do paciente';

@@ -42,6 +42,10 @@ class Config:
     WEATHER_API_URL = 'https://api.openweathermap.org/data/2.5/weather'
     USE_WEATHER_API = _env_bool('USE_WEATHER_API', False)  # Ativar quando API estiver configurada
     DEFAULT_CITY = 'São Paulo'  # Cidade padrão para consultas climáticas
+
+    # Bootstrap para ambiente container/local
+    BOOTSTRAP_ON_START = _env_bool('BOOTSTRAP_ON_START', False)
+    BOOTSTRAP_REFRESH_DATA = _env_bool('BOOTSTRAP_REFRESH_DATA', False)
     
     # Mapeamento de condições climáticas para o modelo
     WEATHER_CONDITION_MAP = {

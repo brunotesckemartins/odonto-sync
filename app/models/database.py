@@ -133,13 +133,32 @@ def get_ultima_consulta_paciente(paciente_id):
     conn.close()
     return consulta
 
+def get_proxima_consulta_paciente(paciente_id, data_referencia):
+    """Retorna a próxima consulta (>= data_referencia) de um paciente."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT id, paciente_id, data, horario, dia_semana, turno, procedimento,
+               antecedencia_dias, e_retorno, n_remarcacoes, proximo_feriado
+        FROM consultas
+        WHERE paciente_id = ? AND data >= ?
+        ORDER BY data ASC, horario ASC
+        LIMIT 1
+    ''', (paciente_id, data_referencia))
+
+    consulta = cursor.fetchone()
+    conn.close()
+    return consulta
+
 def get_consultas_do_dia(data):
     """Busca todas as consultas de uma data específica"""
     conn = get_connection()
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT c.*, p.nome, p.tipo_pagamento, p.faltas_anteriores
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+               p.taxa_historica, p.tempo_como_paciente
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ?
@@ -157,7 +176,8 @@ def get_consultas_alto_risco(data, threshold=0.6):
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT c.*, p.nome, p.tipo_pagamento, p.faltas_anteriores
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+               p.taxa_historica, p.tempo_como_paciente
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ? AND c.risco_calculado >= ?
@@ -168,6 +188,43 @@ def get_consultas_alto_risco(data, threshold=0.6):
     conn.close()
     
     return consultas
+
+def get_consultas_periodo(data_inicio, data_fim):
+    """Busca consultas de um período com dados completos de paciente."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+               p.taxa_historica, p.tempo_como_paciente
+        FROM consultas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.data BETWEEN ? AND ?
+        ORDER BY c.data ASC, c.horario ASC
+    ''', (data_inicio, data_fim))
+
+    consultas = cursor.fetchall()
+    conn.close()
+    return consultas
+
+def get_data_referencia_consultas(data_referencia):
+    """
+    Retorna a data mais próxima com consultas.
+    Prioriza data igual ou futura; se não houver, usa a última passada.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT MIN(data) AS data_ref FROM consultas WHERE data >= ?', (data_referencia,))
+    row = cursor.fetchone()
+    if row and row['data_ref']:
+        conn.close()
+        return row['data_ref']
+
+    cursor.execute('SELECT MAX(data) AS data_ref FROM consultas WHERE data < ?', (data_referencia,))
+    row = cursor.fetchone()
+    conn.close()
+    return row['data_ref'] if row else None
 
 def atualizar_risco_consulta(consulta_id, risco):
     """Atualiza o risco calculado de uma consulta"""

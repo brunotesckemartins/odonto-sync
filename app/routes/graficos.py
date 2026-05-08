@@ -154,7 +154,7 @@ def _grafico_importancia_features():
                 'Faixa Etária', 'Tipo Pagamento', 'Faltas Anteriores',
                 'Taxa Histórica', 'Tempo Paciente', 'Dia Semana',
                 'Turno', 'Procedimento', 'Antecedência', 'É Retorno',
-                'Remarcações', 'Próx. Feriado'
+                'Remarcações', 'Próx. Feriado', 'Condição Clima', 'Temperatura'
             ]
             
             # Importâncias

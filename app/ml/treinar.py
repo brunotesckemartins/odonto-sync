@@ -5,7 +5,7 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
-from sklearn.metrics import roc_auc_score, recall_score, f1_score, classification_report, confusion_matrix
+from sklearn.metrics import roc_auc_score, recall_score, f1_score, classification_report, confusion_matrix, precision_score
 from imblearn.over_sampling import SMOTE
 import joblib
 import os
@@ -158,8 +158,9 @@ def avaliar_modelo(modelo, nome, X_test, y_test, y_pred):
     print(f"\n[EVAL] Avaliação detalhada do {nome}:")
     
     # Classification Report
-    print("\n" + classification_report(y_test, y_pred, 
-                                      target_names=['Compareceu', 'Faltou']))
+    report_text = classification_report(y_test, y_pred, target_names=['Compareceu', 'Faltou'])
+    report_dict = classification_report(y_test, y_pred, target_names=['Compareceu', 'Faltou'], output_dict=True)
+    print("\n" + report_text)
     
     # Confusion Matrix
     cm = confusion_matrix(y_test, y_pred)
@@ -168,6 +169,7 @@ def avaliar_modelo(modelo, nome, X_test, y_test, y_pred):
     print(f"   FN={cm[1,0]:3d}  TP={cm[1,1]:3d}")
     
     # Feature Importance (se disponível)
+    top_features = []
     if hasattr(modelo, 'feature_importances_'):
         print("\n[INFO] Top 5 features mais importantes:")
         importances = modelo.feature_importances_
@@ -181,6 +183,14 @@ def avaliar_modelo(modelo, nome, X_test, y_test, y_pred):
         indices = np.argsort(importances)[::-1][:5]
         for i, idx in enumerate(indices, 1):
             print(f"   {i}. {feature_names[idx]}: {importances[idx]:.4f}")
+            top_features.append((feature_names[idx], float(importances[idx])))
+
+    return {
+        'report_text': report_text,
+        'report_dict': report_dict,
+        'confusion_matrix': cm,
+        'top_features': top_features
+    }
 
 def salvar_modelo(modelo, encoders):
     """Salva o modelo e os encoders no disco"""
@@ -196,6 +206,86 @@ def salvar_modelo(modelo, encoders):
     # Salvar encoders
     joblib.dump(encoders, Config.ENCODERS_PATH)
     print(f"   [OK] Encoders salvos em: {Config.ENCODERS_PATH}")
+
+
+def salvar_relatorio_performance(nome_modelo, melhor_resultado, todos_resultados, avaliacao, y_test):
+    """Gera relatório em markdown com métricas e recorte LGPD."""
+    caminho_relatorio = os.path.join(Config.DADOS_DIR, 'relatorio_ia_lgpd.md')
+    cm = avaliacao['confusion_matrix']
+    report = avaliacao['report_dict']
+
+    linhas_modelos = []
+    for nome, resultado in todos_resultados.items():
+        linhas_modelos.append(
+            f"| {nome} | {resultado['auc']:.4f} | {resultado['recall']:.4f} | {resultado['f1']:.4f} |"
+        )
+
+    top_features_md = '\n'.join(
+        [f"- **{nome}**: {valor:.4f}" for nome, valor in avaliacao['top_features']]
+    ) or '- Modelo sem feature importance disponível.'
+
+    conteudo = f"""# Relatório de Performance da IA (LGPD)
+
+## 1. Resultado do Treinamento
+- **Modelo vencedor:** {nome_modelo}
+- **AUC-ROC:** {melhor_resultado['auc']:.4f}
+- **Recall (faltas):** {melhor_resultado['recall']:.4f}
+- **F1-Score (faltas):** {melhor_resultado['f1']:.4f}
+- **Precisão (faltas):** {precision_score(y_test, melhor_resultado['y_pred'], zero_division=0):.4f}
+
+## 2. Comparação entre Modelos
+| Modelo | AUC-ROC | Recall | F1-Score |
+|---|---:|---:|---:|
+{chr(10).join(linhas_modelos)}
+
+## 3. Matriz de Confusão
+- **TN:** {cm[0,0]}
+- **FP:** {cm[0,1]}
+- **FN:** {cm[1,0]}
+- **TP:** {cm[1,1]}
+
+## 4. Principais Variáveis do Modelo
+{top_features_md}
+
+## 5. Variáveis de Usuário Disponíveis (com LGPD)
+### Usadas no modelo (minimização de dados)
+- faixa_etaria
+- tipo_pagamento
+- faltas_anteriores
+- taxa_historica
+- tempo_como_paciente
+- dia_semana
+- turno
+- procedimento
+- antecedencia_dias
+- e_retorno
+- n_remarcacoes
+- proximo_feriado
+- condicao_clima
+- temperatura
+
+### Mantidas para operação (não usadas no treino)
+- paciente_id (pseudônimo)
+- nome (mascarado em iniciais)
+
+### Removidas do pipeline de IA por LGPD
+- documento
+- celular
+- prontuário
+- nome completo
+
+## 6. Medidas de Conformidade LGPD Aplicadas
+1. **Minimização:** treino sem dados pessoais diretos.
+2. **Pseudonimização:** ID técnico para cada paciente.
+3. **Mascaramento:** nome exibido por iniciais.
+4. **Finalidade:** uso dos dados apenas para previsão de faltas e otimização de agenda.
+
+## 7. Observação Metodológica
+Para a base importada de pacientes, os desfechos históricos de comparecimento foram construídos para viabilizar o treinamento supervisionado sem usar documentos sensíveis.
+"""
+    with open(caminho_relatorio, 'w', encoding='utf-8') as f:
+        f.write(conteudo)
+    print(f"   [OK] Relatório salvo em: {caminho_relatorio}")
 
 def main():
     """Pipeline completo de treinamento"""
@@ -230,7 +320,7 @@ def main():
     )
     
     # 6. Avaliar em detalhes
-    avaliar_modelo(melhor_modelo, melhor_nome, X_test, y_test, melhor_resultado['y_pred'])
+    avaliacao = avaliar_modelo(melhor_modelo, melhor_nome, X_test, y_test, melhor_resultado['y_pred'])
     
     # 7. Verificar se atende os critérios
     print("\n" + "="*60)
@@ -253,6 +343,7 @@ def main():
     
     # 8. Salvar
     salvar_modelo(melhor_modelo, encoders)
+    salvar_relatorio_performance(melhor_nome, melhor_resultado, todos_resultados, avaliacao, y_test)
     
     print("\n" + "="*60)
     print("[OK] Treinamento concluído com sucesso!")

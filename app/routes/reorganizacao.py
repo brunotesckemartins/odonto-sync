@@ -1,67 +1,77 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
-from datetime import datetime
+from flask import Blueprint, render_template, request, jsonify
+from datetime import datetime, timedelta
 import sys
 import os
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from app.models.database import get_consultas_alto_risco, get_connection
-from app.ml.substituicao import buscar_substitutos, confirmar_substituicao
+from app.models.database import get_consultas_periodo, get_data_referencia_consultas, get_connection
+from app.ml.substituicao import (
+    buscar_substitutos,
+    confirmar_substituicao,
+    sugerir_reagendamento_inteligente,
+    confirmar_reagendamento
+)
 from app.ml.inferencia import prever_e_classificar
 
 bp = Blueprint('reorganizacao', __name__, url_prefix='/reorganizacao')
 
 @bp.route('/')
 def index():
-    """Lista consultas de alto risco do dia com opção de buscar substitutos"""
+    """Lista consultas de alto risco para os próximos dias com opção de ação."""
     
-    # Data de hoje
-    hoje = datetime.now().strftime('%Y-%m-%d')
-    
-    # Buscar consultas de alto risco (>= 60%)
-    consultas_alto_risco = get_consultas_alto_risco(hoje, threshold=0.6)
-    
-    # Se não houver consultas, usar dados demo
-    if not consultas_alto_risco:
-        consultas_alto_risco = _gerar_demo_alto_risco()
-    
-    # Calcular risco para cada consulta
+    hoje_dt = datetime.now().date()
+    data_inicio = hoje_dt.strftime('%Y-%m-%d')
+    data_fim = (hoje_dt + timedelta(days=14)).strftime('%Y-%m-%d')
+    consultas_periodo = get_consultas_periodo(data_inicio, data_fim)
+    periodo_label = f'{data_inicio} a {data_fim}'
+
+    if not consultas_periodo:
+        data_base = get_data_referencia_consultas(data_inicio)
+        if data_base:
+            data_base_dt = datetime.strptime(data_base, '%Y-%m-%d').date()
+            data_fim_base = (data_base_dt + timedelta(days=14)).strftime('%Y-%m-%d')
+            consultas_periodo = get_consultas_periodo(data_base, data_fim_base)
+            periodo_label = f'{data_base} a {data_fim_base}'
+
     consultas_com_risco = []
-    
-    for consulta in consultas_alto_risco:
+    for consulta in consultas_periodo:
         try:
+            consulta_dict = dict(consulta)
             # Preparar dados para predição
             dados_consulta = {
-                'faixa_etaria': consulta.get('faixa_etaria', '18-35'),
-                'tipo_pagamento': consulta.get('tipo_pagamento', 'Convênio'),
-                'faltas_anteriores': consulta.get('faltas_anteriores', 0),
-                'taxa_historica': consulta.get('taxa_historica', 0.0),
-                'tempo_como_paciente': consulta.get('tempo_como_paciente', 12),
-                'dia_semana': consulta['dia_semana'],
-                'turno': consulta['turno'],
-                'procedimento': consulta['procedimento'],
-                'antecedencia_dias': consulta['antecedencia_dias'],
-                'e_retorno': consulta['e_retorno'],
-                'n_remarcacoes': consulta['n_remarcacoes'],
-                'proximo_feriado': consulta['proximo_feriado']
+                'faixa_etaria': consulta_dict.get('faixa_etaria', '36-60'),
+                'tipo_pagamento': consulta_dict.get('tipo_pagamento', 'Convênio'),
+                'faltas_anteriores': consulta_dict.get('faltas_anteriores', 0),
+                'taxa_historica': consulta_dict.get('taxa_historica', 0.0),
+                'tempo_como_paciente': consulta_dict.get('tempo_como_paciente', 12),
+                'dia_semana': consulta_dict['dia_semana'],
+                'turno': consulta_dict['turno'],
+                'procedimento': consulta_dict['procedimento'],
+                'antecedencia_dias': consulta_dict['antecedencia_dias'],
+                'e_retorno': consulta_dict['e_retorno'],
+                'n_remarcacoes': consulta_dict['n_remarcacoes'],
+                'proximo_feriado': consulta_dict['proximo_feriado'],
+                'condicao_clima': consulta_dict.get('condicao_clima', 'ensolarado'),
+                'temperatura': consulta_dict.get('temperatura', 25)
             }
             
-            # Calcular risco
             risco = prever_e_classificar(dados_consulta)
-            
-            # Adicionar risco aos dados
-            consulta_dict = dict(consulta)
             consulta_dict['risco'] = risco
             consultas_com_risco.append(consulta_dict)
             
         except Exception as e:
             print(f"Erro ao calcular risco: {e}")
             continue
-    
+    consultas_com_risco.sort(key=lambda x: x['risco']['probabilidade'], reverse=True)
+    consultas_alto_risco = [c for c in consultas_com_risco if c['risco']['probabilidade_decimal'] >= 0.6]
+    consultas_monitoramento = [c for c in consultas_com_risco if c['risco']['probabilidade_decimal'] < 0.6][:10]
+
     return render_template(
         'reorganizacao.html',
-        consultas=consultas_com_risco,
-        data=hoje,
+        consultas=consultas_alto_risco if consultas_alto_risco else consultas_monitoramento,
+        data=periodo_label,
+        mostrando_monitoramento=not bool(consultas_alto_risco),
         active_page='reorganizacao'
     )
 
@@ -95,15 +105,12 @@ def buscar_substitutos_route(consulta_id):
             n=3
         )
         
-        # Se não houver substitutos reais, gerar demo
-        if not substitutos:
-            substitutos = _gerar_substitutos_demo(consulta)
-        
         return jsonify({
             'sucesso': True,
             'consulta': {
                 'id': consulta['id'],
                 'paciente': consulta['nome'],
+                'data': consulta['data'],
                 'horario': consulta['horario'],
                 'procedimento': consulta['procedimento']
             },
@@ -147,83 +154,31 @@ def confirmar():
             'mensagem': f'Erro ao confirmar substituição: {str(e)}'
         }), 500
 
-def _gerar_demo_alto_risco():
-    """Gera dados demo de consultas de alto risco"""
-    
-    hoje = datetime.now()
-    dia_semana = hoje.strftime('%A')
-    
-    return [
-        {
-            'id': 1,
-            'horario': '08:00',
-            'nome': 'Maria Silva',
-            'tipo_pagamento': 'SUS',
-            'procedimento': 'Consulta',
-            'faltas_anteriores': 3,
-            'antecedencia_dias': 21,
-            'dia_semana': dia_semana,
-            'turno': 'Manhã',
-            'e_retorno': 0,
-            'n_remarcacoes': 2,
-            'proximo_feriado': 1,
-            'faixa_etaria': '18-35',
-            'taxa_historica': 0.6,
-            'tempo_como_paciente': 4,
-            'data': hoje.strftime('%Y-%m-%d')
-        },
-        {
-            'id': 3,
-            'horario': '17:00',
-            'nome': 'Carlos Souza',
-            'tipo_pagamento': 'Convênio',
-            'procedimento': 'Obturação',
-            'faltas_anteriores': 4,
-            'antecedencia_dias': 30,
-            'dia_semana': dia_semana,
-            'turno': 'Tarde',
-            'e_retorno': 0,
-            'n_remarcacoes': 3,
-            'proximo_feriado': 1,
-            'faixa_etaria': '18-35',
-            'taxa_historica': 0.7,
-            'tempo_como_paciente': 2,
-            'data': hoje.strftime('%Y-%m-%d')
-        }
-    ]
 
-def _gerar_substitutos_demo(consulta):
-    """Gera substitutos demo para demonstração"""
-    
-    return [
-        {
-            'paciente_id': 'PAC9001',
-            'nome': 'João Pedro Silva',
-            'tipo_pagamento': 'Particular',
-            'faixa_etaria': '36-60',
-            'faltas_anteriores': 0,
-            'probabilidade_falta': 8.5,
-            'justificativa': 'Recomendado: histórico confiável, sem faltas anteriores, pagamento particular, paciente há mais de 2 anos',
-            'score': 92.3
-        },
-        {
-            'paciente_id': 'PAC9002',
-            'nome': 'Ana Paula Costa',
-            'tipo_pagamento': 'Particular',
-            'faixa_etaria': '60+',
-            'faltas_anteriores': 0,
-            'probabilidade_falta': 12.3,
-            'justificativa': 'Recomendado: sem faltas anteriores, pagamento particular, taxa de falta < 10%',
-            'score': 88.7
-        },
-        {
-            'paciente_id': 'PAC9003',
-            'nome': 'Roberto Alves Santos',
-            'tipo_pagamento': 'Convênio',
-            'faixa_etaria': '36-60',
-            'faltas_anteriores': 1,
-            'probabilidade_falta': 18.9,
-            'justificativa': 'Recomendado: histórico confiável, paciente há mais de 2 anos',
-            'score': 82.1
-        }
-    ]
+@bp.route('/reagendamento/<int:consulta_id>')
+def sugerir_reagendamento_route(consulta_id):
+    """Sugere novas janelas de horário para reduzir risco de falta."""
+    try:
+        opcoes = sugerir_reagendamento_inteligente(consulta_id=consulta_id, janela_dias=21, max_opcoes=5)
+        return jsonify({
+            'sucesso': True,
+            'opcoes': opcoes
+        })
+    except ValueError as e:
+        return jsonify({'sucesso': False, 'mensagem': str(e)}), 400
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao sugerir reagendamento: {str(e)}'}), 500
+
+
+@bp.route('/confirmar-reagendamento', methods=['POST'])
+def confirmar_reagendamento_route():
+    """Confirma o reagendamento para data/hora sugeridos."""
+    try:
+        consulta_id = int(request.form.get('consulta_id'))
+        data = request.form.get('data')
+        horario = request.form.get('horario')
+        resultado = confirmar_reagendamento(consulta_id=consulta_id, nova_data=data, novo_horario=horario)
+        status = 200 if resultado['sucesso'] else 400
+        return jsonify(resultado), status
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao confirmar reagendamento: {str(e)}'}), 500

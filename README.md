@@ -27,10 +27,11 @@ Blueprints principais:
 
 ## Pipeline de dados e modelo
 
-1. `python -m app.ml.gerar_dados` gera `dados/agendamentos.csv`.
+1. `python -m app.ml.gerar_dados` gera `dados/agendamentos.csv` com pacientes reais pseudonimizados (LGPD), quando houver planilha/base real disponível.
 2. `python -m app.ml.treinar` treina e salva:
    - `modelo/random_forest.pkl`
    - `modelo/encoders.pkl`
+   - `dados/relatorio_ia_lgpd.md`
 3. `python -m app.models.popular_banco` popula `dados/odontoml.db`.
 4. `python run.py` inicia a aplicação web.
 
@@ -57,9 +58,14 @@ Aplicação disponível em `http://localhost:5000`.
 ## Execução com Docker
 
 ```bash
-docker compose up --build -d
+docker compose down
+docker compose up --build -d --force-recreate
 docker compose logs -f
 ```
+
+Variáveis úteis no `docker-compose.yml`:
+- `BOOTSTRAP_ON_START=True` para gerar dados/treinar/popular banco automaticamente quando necessário.
+- `BOOTSTRAP_REFRESH_DATA=True` para forçar refresh completo do pipeline na subida.
 
 ## Configuração
 

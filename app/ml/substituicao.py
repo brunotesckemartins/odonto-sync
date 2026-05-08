@@ -1,105 +1,139 @@
-import sys
 import os
+import sys
 from datetime import datetime, timedelta
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from config import Config
 from app.models.database import get_connection
-from app.ml.inferencia import prever_risco
 from app.ml.ai_suggestions import get_ai_assistant
+from app.ml.inferencia import prever_risco
 
-def buscar_substitutos(consulta_id, data, horario, n=3):
-    """
-    Busca pacientes substitutos para uma consulta de alto risco.
-    
-    Estratégia:
-    1. Buscar pacientes sem consulta agendada naquele dia
-    2. Calcular probabilidade de falta de cada candidato
-    3. Ordenar por menor probabilidade (mais confiável)
-    4. Retornar os N melhores candidatos com justificativa
-    
-    Args:
-        consulta_id (int): ID da consulta original
-        data (str): Data da consulta (YYYY-MM-DD)
-        horario (str): Horário da consulta (HH:MM)
-        n (int): Número de substitutos a retornar
-    
-    Returns:
-        list: Lista de dicionários com dados dos substitutos
-    """
-    
+
+HORARIOS_PADRAO = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00']
+
+
+def _determinar_turno(horario):
+    hora = int(horario.split(':')[0])
+    if hora < 12:
+        return 'Manhã'
+    if hora < 18:
+        return 'Tarde'
+    return 'Noite'
+
+
+def _dados_predicao(paciente, procedimento, data, horario, antecedencia_dias, n_remarcacoes):
+    return {
+        'faixa_etaria': paciente['faixa_etaria'],
+        'tipo_pagamento': paciente['tipo_pagamento'],
+        'faltas_anteriores': paciente['faltas_anteriores'],
+        'taxa_historica': paciente['taxa_historica'],
+        'tempo_como_paciente': paciente['tempo_como_paciente'],
+        'dia_semana': datetime.strptime(data, '%Y-%m-%d').strftime('%A'),
+        'turno': _determinar_turno(horario),
+        'procedimento': procedimento,
+        'antecedencia_dias': max(1, int(antecedencia_dias)),
+        'e_retorno': 0,
+        'n_remarcacoes': max(0, int(n_remarcacoes)),
+        'proximo_feriado': 0,
+        'condicao_clima': 'ensolarado',
+        'temperatura': 25
+    }
+
+
+def _buscar_consulta_e_paciente(consulta_id):
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Buscar informações da consulta original
     cursor.execute('''
-        SELECT c.*, p.*
+        SELECT c.*, p.id AS p_id, p.nome, p.faixa_etaria, p.tipo_pagamento,
+               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.id = ?
     ''', (consulta_id,))
-    
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+
+def _gerar_justificativa(candidato, prob_falta):
+    razoes = []
+    if prob_falta < 0.3:
+        razoes.append('histórico confiável')
+    if candidato['faltas_anteriores'] == 0:
+        razoes.append('sem faltas anteriores')
+    if candidato['tipo_pagamento'] == 'Particular':
+        razoes.append('pagamento particular')
+    if candidato['tempo_como_paciente'] > 24:
+        razoes.append('paciente há mais de 2 anos')
+    if candidato['taxa_historica'] < 0.1:
+        razoes.append('taxa de falta < 10%')
+    if not razoes:
+        razoes.append('disponível no horário')
+    return 'Recomendado: ' + ', '.join(razoes)
+
+
+def _calcular_score_compatibilidade(candidato, prob_falta):
+    score = 0.0
+    score += (1 - prob_falta) * 40
+    faltas = min(candidato['faltas_anteriores'], 5)
+    score += (5 - faltas) / 5 * 20
+
+    if candidato['tipo_pagamento'] == 'Particular':
+        score += 20
+    elif candidato['tipo_pagamento'] == 'Convênio':
+        score += 15
+    else:
+        score += 10
+
+    tempo_norm = min(candidato['tempo_como_paciente'], 60) / 60
+    score += tempo_norm * 10
+    score += (1 - candidato['taxa_historica']) * 10
+    return round(score, 2)
+
+
+def buscar_substitutos(consulta_id, data, horario, n=3):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento,
+               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente
+        FROM consultas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.id = ?
+    ''', (consulta_id,))
     consulta_original = cursor.fetchone()
-    
     if not consulta_original:
         conn.close()
         return []
-    
-    # Buscar pacientes que NÃO têm consulta naquele dia
+
     cursor.execute('''
         SELECT DISTINCT p.*
         FROM pacientes p
-        WHERE p.id NOT IN (
-            SELECT paciente_id 
-            FROM consultas 
-            WHERE data = ?
-        )
-        LIMIT 50
-    ''', (data,))
-    
+        WHERE p.id != ?
+          AND p.id NOT IN (
+              SELECT paciente_id FROM consultas WHERE data = ? AND horario = ?
+          )
+        LIMIT 120
+    ''', (consulta_original['paciente_id'], data, horario))
     candidatos = cursor.fetchall()
     conn.close()
-    
+
     if not candidatos:
         return []
-    
-    # Calcular risco de cada candidato
+
     substitutos = []
-    
     for candidato in candidatos:
-        # Criar dados da consulta hipotética
-        dados_consulta = {
-            'faixa_etaria': candidato['faixa_etaria'],
-            'tipo_pagamento': candidato['tipo_pagamento'],
-            'faltas_anteriores': candidato['faltas_anteriores'],
-            'taxa_historica': candidato['taxa_historica'],
-            'tempo_como_paciente': candidato['tempo_como_paciente'],
-            'dia_semana': datetime.strptime(data, '%Y-%m-%d').strftime('%A'),
-            'turno': _determinar_turno(horario),
-            'procedimento': consulta_original['procedimento'],
-            'antecedencia_dias': 0,  # Assumir confirmação imediata
-            'e_retorno': 0,
-            'n_remarcacoes': 0,
-            'proximo_feriado': 0
-        }
-        
-        # Calcular probabilidade de falta
-        try:
-            prob_falta = prever_risco(dados_consulta)
-        except:
-            prob_falta = 0.5  # Fallback se houver erro
-        
-        # Gerar justificativa
-        justificativa = _gerar_justificativa(candidato, prob_falta)
-        
-        # Calcular score de compatibilidade
-        score = _calcular_score_compatibilidade(
-            candidato, 
-            consulta_original, 
-            prob_falta
+        dados_consulta = _dados_predicao(
+            paciente=candidato,
+            procedimento=consulta_original['procedimento'],
+            data=data,
+            horario=horario,
+            antecedencia_dias=1,
+            n_remarcacoes=0
         )
-        
+        prob_falta = prever_risco(dados_consulta)
+        score = _calcular_score_compatibilidade(candidato, prob_falta)
         substitutos.append({
             'paciente_id': candidato['id'],
             'nome': candidato['nome'],
@@ -111,199 +145,196 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
             'tempo_como_paciente': candidato['tempo_como_paciente'],
             'taxa_historica': candidato['taxa_historica'],
             'compatibilidade': score,
-            'justificativa': justificativa,
+            'justificativa': _gerar_justificativa(candidato, prob_falta),
             'score': score
         })
-    
-    # Ordenar por score (maior = melhor)
+
     substitutos.sort(key=lambda x: x['score'], reverse=True)
     top_substitutos = substitutos[:n]
-    
-    # Usar IA para gerar justificativas melhores
+
     ai = get_ai_assistant()
     if ai.available and Config.USE_AI_SUGGESTIONS:
         original_patient = {
-            'nome': consulta_original.get('nome', ''),
-            'probabilidade': consulta_original.get('probabilidade', 0),
-            'faltas_anteriores': consulta_original.get('faltas_anteriores', 0)
+            'nome': consulta_original['nome'],
+            'probabilidade': 0,
+            'faltas_anteriores': consulta_original['faltas_anteriores']
         }
-        top_substitutos = ai.analyze_substitutes(
-            original_patient, top_substitutos, data, horario
-        )
-    
+        top_substitutos = ai.analyze_substitutes(original_patient, top_substitutos, data, horario)
+
     return top_substitutos
 
-def _determinar_turno(horario):
-    """Determina o turno com base no horário"""
-    hora = int(horario.split(':')[0])
-    
-    if hora < 12:
-        return 'Manhã'
-    elif hora < 18:
-        return 'Tarde'
-    else:
-        return 'Noite'
 
-def _gerar_justificativa(candidato, prob_falta):
-    """Gera justificativa para o candidato"""
-    razoes = []
-    
-    # Taxa de falta baixa
-    if prob_falta < 0.3:
-        razoes.append("histórico confiável")
-    
-    # Sem faltas anteriores
-    if candidato['faltas_anteriores'] == 0:
-        razoes.append("sem faltas anteriores")
-    
-    # Particular (mais confiável)
-    if candidato['tipo_pagamento'] == 'Particular':
-        razoes.append("pagamento particular")
-    
-    # Paciente antigo
-    if candidato['tempo_como_paciente'] > 24:
-        razoes.append("paciente há mais de 2 anos")
-    
-    # Taxa histórica baixa
-    if candidato['taxa_historica'] < 0.1:
-        razoes.append("taxa de falta < 10%")
-    
-    if not razoes:
-        razoes.append("disponível no horário")
-    
-    return "Recomendado: " + ", ".join(razoes)
-
-def _calcular_score_compatibilidade(candidato, consulta_original, prob_falta):
-    """
-    Calcula score de compatibilidade (quanto maior, melhor).
-    
-    Fatores:
-    - Probabilidade de falta baixa (peso 40%)
-    - Sem faltas anteriores (peso 20%)
-    - Tipo de pagamento confiável (peso 20%)
-    - Tempo como paciente (peso 10%)
-    - Taxa histórica baixa (peso 10%)
-    """
-    
-    score = 0.0
-    
-    # Fator 1: Probabilidade de falta (inverso: menor prob = maior score)
-    score += (1 - prob_falta) * 40
-    
-    # Fator 2: Faltas anteriores (inverso)
-    faltas = min(candidato['faltas_anteriores'], 5)  # Cap em 5
-    score += (5 - faltas) / 5 * 20
-    
-    # Fator 3: Tipo de pagamento
-    if candidato['tipo_pagamento'] == 'Particular':
-        score += 20
-    elif candidato['tipo_pagamento'] == 'Convênio':
-        score += 15
-    else:  # SUS
+def _score_reagendamento(prob_falta_novo, antecedencia_dias, turno, reducao_risco):
+    score = (1 - prob_falta_novo) * 70
+    if 2 <= antecedencia_dias <= 10:
         score += 10
-    
-    # Fator 4: Tempo como paciente (normalizado para 60 meses)
-    tempo_norm = min(candidato['tempo_como_paciente'], 60) / 60
-    score += tempo_norm * 10
-    
-    # Fator 5: Taxa histórica (inverso)
-    score += (1 - candidato['taxa_historica']) * 10
-    
+    elif antecedencia_dias > 20:
+        score -= 8
+    if turno == 'Manhã':
+        score += 8
+    elif turno == 'Noite':
+        score -= 5
+    score += max(0, reducao_risco) * 25
     return round(score, 2)
 
-def confirmar_substituicao(consulta_id, paciente_substituto_id, data, horario):
-    """
-    Confirma a substituição de um paciente.
-    
-    Args:
-        consulta_id (int): ID da consulta original
-        paciente_substituto_id (str): ID do paciente substituto
-        data (str): Data da nova consulta
-        horario (str): Horário da nova consulta
-    
-    Returns:
-        dict: Resultado da operação
-    """
-    
+
+def sugerir_reagendamento_inteligente(consulta_id, janela_dias=21, max_opcoes=5):
+    consulta = _buscar_consulta_e_paciente(consulta_id)
+    if not consulta:
+        raise ValueError('Consulta não encontrada.')
+
+    hoje = datetime.now()
+    data_atual = datetime.strptime(consulta['data'], '%Y-%m-%d')
+    dados_origem = _dados_predicao(
+        paciente=consulta,
+        procedimento=consulta['procedimento'],
+        data=consulta['data'],
+        horario=consulta['horario'],
+        antecedencia_dias=max(1, (data_atual.date() - hoje.date()).days),
+        n_remarcacoes=consulta['n_remarcacoes']
+    )
+    prob_origem = prever_risco(dados_origem)
+
     conn = get_connection()
     cursor = conn.cursor()
-    
+    opcoes = []
+
+    for dia in range(1, janela_dias + 1):
+        data_candidata = (hoje + timedelta(days=dia)).strftime('%Y-%m-%d')
+        cursor.execute('SELECT horario FROM consultas WHERE data = ?', (data_candidata,))
+        ocupados = {row['horario'] for row in cursor.fetchall()}
+
+        for horario in HORARIOS_PADRAO:
+            if horario in ocupados:
+                continue
+
+            antecedencia = max(1, dia)
+            turno = _determinar_turno(horario)
+            dados_novos = _dados_predicao(
+                paciente=consulta,
+                procedimento=consulta['procedimento'],
+                data=data_candidata,
+                horario=horario,
+                antecedencia_dias=antecedencia,
+                n_remarcacoes=consulta['n_remarcacoes'] + 1
+            )
+            prob_novo = prever_risco(dados_novos)
+            reducao = prob_origem - prob_novo
+            score = _score_reagendamento(prob_novo, antecedencia, turno, reducao)
+
+            justificativa = (
+                f'Risco estimado {round(prob_novo * 100, 1)}% '
+                f'(redução de {round(max(0, reducao) * 100, 1)} p.p. vs agenda atual).'
+            )
+            opcoes.append({
+                'data': data_candidata,
+                'horario': horario,
+                'turno': turno,
+                'antecedencia_dias': antecedencia,
+                'probabilidade_falta': round(prob_novo * 100, 1),
+                'reducao_risco_pp': round(reducao * 100, 1),
+                'score': score,
+                'justificativa': justificativa
+            })
+
+    conn.close()
+    opcoes_melhora = [op for op in opcoes if op['reducao_risco_pp'] > 0.1]
+    if opcoes_melhora:
+        opcoes_melhora.sort(key=lambda x: (x['reducao_risco_pp'], x['score']), reverse=True)
+        return opcoes_melhora[:max_opcoes]
+
+    # Se não houver melhora de risco, retorna os horários de menor risco absoluto.
+    opcoes.sort(key=lambda x: (x['probabilidade_falta'], x['score']))
+    return opcoes[:max_opcoes]
+
+
+def confirmar_substituicao(consulta_id, paciente_substituto_id, data, horario):
+    conn = get_connection()
+    cursor = conn.cursor()
     try:
-        # Buscar informações da consulta original
-        cursor.execute('''
-            SELECT * FROM consultas WHERE id = ?
-        ''', (consulta_id,))
-        
+        cursor.execute('SELECT * FROM consultas WHERE id = ?', (consulta_id,))
         consulta_original = cursor.fetchone()
-        
         if not consulta_original:
             return {'sucesso': False, 'mensagem': 'Consulta não encontrada'}
-        
-        # Buscar paciente substituto
-        cursor.execute('''
-            SELECT * FROM pacientes WHERE id = ?
-        ''', (paciente_substituto_id,))
-        
+
+        cursor.execute('SELECT * FROM pacientes WHERE id = ?', (paciente_substituto_id,))
         paciente = cursor.fetchone()
-        
         if not paciente:
             return {'sucesso': False, 'mensagem': 'Paciente não encontrado'}
-        
-        # Criar nova consulta para o substituto
+
+        # Substituição correta: troca o paciente da consulta original (não cria nova consulta no mesmo horário).
         cursor.execute('''
-            INSERT INTO consultas (
-                paciente_id, data, horario, dia_semana, turno,
-                procedimento, antecedencia_dias, e_retorno,
-                n_remarcacoes, proximo_feriado
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            paciente_substituto_id,
-            data,
-            horario,
-            consulta_original['dia_semana'],
-            consulta_original['turno'],
-            consulta_original['procedimento'],
-            0,  # Antecedência imediata
-            0,  # Não é retorno
-            0,  # Sem remarcações
-            consulta_original['proximo_feriado']
-        ))
-        
+            SELECT COUNT(*) AS total
+            FROM consultas
+            WHERE paciente_id = ? AND data = ? AND horario = ? AND id != ?
+        ''', (paciente_substituto_id, data, horario, consulta_id))
+        if cursor.fetchone()['total'] > 0:
+            return {'sucesso': False, 'mensagem': 'Paciente substituto já possui consulta neste horário'}
+
+        cursor.execute('''
+            UPDATE consultas
+            SET paciente_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (paciente_substituto_id, consulta_id))
         conn.commit()
-        conn.close()
-        
         return {
             'sucesso': True,
-            'mensagem': f'Substituição confirmada! {paciente["nome"]} agendado para {data} às {horario}',
-            'nova_consulta_id': cursor.lastrowid
+            'mensagem': f'Substituição confirmada! {paciente["nome"]} assumiu a consulta de {data} às {horario}.',
+            'consulta_id': consulta_id
         }
-        
     except Exception as e:
         conn.rollback()
-        conn.close()
         return {'sucesso': False, 'mensagem': f'Erro: {str(e)}'}
+    finally:
+        conn.close()
 
-# Teste
-if __name__ == '__main__':
-    print("Testando sistema de substituição...\n")
-    
-    # Simular busca de substitutos para uma consulta
-    print("Buscando substitutos para consulta ID 1...")
-    
-    substitutos = buscar_substitutos(
-        consulta_id=1,
-        data='2025-04-15',
-        horario='14:00',
-        n=5
-    )
-    
-    if substitutos:
-        print(f"\n{len(substitutos)} substitutos encontrados:\n")
-        for i, sub in enumerate(substitutos, 1):
-            print(f"{i}. {sub['nome']} ({sub['tipo_pagamento']})")
-            print(f"   Probabilidade de falta: {sub['probabilidade_falta']}%")
-            print(f"   Score: {sub['score']}/100")
-            print(f"   {sub['justificativa']}\n")
-    else:
-        print("Nenhum substituto encontrado")
+
+def confirmar_reagendamento(consulta_id, nova_data, novo_horario):
+    if not nova_data or not novo_horario:
+        return {'sucesso': False, 'mensagem': 'Data e horário são obrigatórios para reagendamento'}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM consultas WHERE id = ?', (consulta_id,))
+        consulta = cursor.fetchone()
+        if not consulta:
+            return {'sucesso': False, 'mensagem': 'Consulta não encontrada'}
+
+        cursor.execute('''
+            SELECT COUNT(*) AS total FROM consultas
+            WHERE data = ? AND horario = ? AND id != ?
+        ''', (nova_data, novo_horario, consulta_id))
+        if cursor.fetchone()['total'] > 0:
+            return {'sucesso': False, 'mensagem': 'Horário já ocupado'}
+
+        hoje = datetime.now().date()
+        data_nova = datetime.strptime(nova_data, '%Y-%m-%d').date()
+        antecedencia = max(1, (data_nova - hoje).days)
+
+        cursor.execute('''
+            UPDATE consultas
+            SET data = ?, horario = ?, dia_semana = ?, turno = ?,
+                antecedencia_dias = ?, n_remarcacoes = n_remarcacoes + 1,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (
+            nova_data,
+            novo_horario,
+            datetime.strptime(nova_data, '%Y-%m-%d').strftime('%A'),
+            _determinar_turno(novo_horario),
+            antecedencia,
+            consulta_id
+        ))
+
+        conn.commit()
+        return {
+            'sucesso': True,
+            'mensagem': f'Reagendamento confirmado para {nova_data} às {novo_horario}.',
+            'consulta_id': consulta_id
+        }
+    except Exception as e:
+        conn.rollback()
+        return {'sucesso': False, 'mensagem': f'Erro: {str(e)}'}
+    finally:
+        conn.close()

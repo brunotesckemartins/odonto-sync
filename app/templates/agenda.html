@@ -35,6 +35,7 @@
 </div>
 {% endif %}
 
+{% if consultas %}
 <!-- Tabela de Consultas -->
 <div class="table-container">
     <table>
@@ -53,7 +54,7 @@
         </thead>
         <tbody>
             {% for consulta in consultas %}
-            <tr>
+            <tr id="consulta-row-{{ consulta.id }}">
                 <td><strong>{{ consulta.horario }}</strong></td>
                 <td>{{ consulta.nome }}</td>
                 <td>{{ consulta.procedimento }}</td>
@@ -74,17 +75,19 @@
                     </span>
                 </td>
                 <td>
-                    {% if consulta.risco.categoria == 'Alto' %}
-                    <a href="/reorganizacao" style="font-size: 0.875rem; color: var(--accent-primary);">
-                        Ver substitutos →
-                    </a>
-                    {% else %}
-                    <span style="color: var(--text-secondary); font-size: 0.875rem;">—</span>
-                    {% endif %}
+                    <button type="button" class="secondary-button" onclick="buscarReagendamento({{ consulta.id }})">
+                        Reagendar
+                    </button>
+                    <div id="reagendamento-{{ consulta.id }}" style="display:none; margin-top: 0.75rem;"></div>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
+{% else %}
+<div class="alert alert-info">
+    Nenhuma consulta encontrada para hoje.
+</div>
+{% endif %}
 {% endblock %}

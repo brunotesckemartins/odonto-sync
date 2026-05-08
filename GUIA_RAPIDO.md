@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ### 2. Gerar Dados e Treinar Modelo
 
 ```bash
-# Gerar dataset com features climáticas (1200 registros)
+# Gerar dataset (usa base real com pseudonimização LGPD se disponível)
 python -m app.ml.gerar_dados
 
 # Treinar modelo otimizado
@@ -48,13 +48,13 @@ python run.py
 ```bash
 python -m app.ml.gerar_dados
 ```
-**Output:** `dados/agendamentos.csv` (1200 registros com clima)
+**Output:** `dados/agendamentos.csv`
 
 ### Retreinar Modelo
 ```bash
 python -m app.ml.treinar
 ```
-**Output:** `modelo/random_forest.pkl` e `modelo/encoders.pkl`
+**Output:** `modelo/random_forest.pkl`, `modelo/encoders.pkl` e `dados/relatorio_ia_lgpd.md`
 
 ### Popular Banco de Dados
 ```bash

@@ -6,7 +6,12 @@ import os
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from app.ml.inferencia import prever_e_classificar
-from app.models.database import get_paciente, get_ultima_consulta_paciente, listar_pacientes_para_simulacao
+from app.models.database import (
+    get_paciente,
+    get_ultima_consulta_paciente,
+    get_proxima_consulta_paciente,
+    listar_pacientes_para_simulacao
+)
 
 bp = Blueprint('simulacao', __name__, url_prefix='/simular')
 
@@ -26,10 +31,10 @@ def simular():
     
     try:
         paciente_id = request.form.get('paciente_id', '').strip() or None
+        hoje = datetime.now()
         paciente = get_paciente(paciente_id) if paciente_id else None
         ultima_consulta = get_ultima_consulta_paciente(paciente_id) if paciente_id else None
-
-        hoje = datetime.now()
+        proxima_consulta = get_proxima_consulta_paciente(paciente_id, hoje.strftime('%Y-%m-%d')) if paciente_id else None
 
         dados_base = {
             'faixa_etaria': paciente['faixa_etaria'] if paciente else '36-60',
@@ -71,12 +76,17 @@ def simular():
                 return float(padrao)
             return float(valor)
 
+        def _taxa_percentual_para_decimal(campo, padrao_decimal):
+            valor_percentual = _to_float(campo, float(padrao_decimal) * 100.0)
+            valor_percentual = min(100.0, max(0.0, valor_percentual))
+            return valor_percentual / 100.0
+
         # Coletar dados do formulário
         dados_consulta = {
             'faixa_etaria': request.form.get('faixa_etaria', dados_base['faixa_etaria']),
             'tipo_pagamento': request.form.get('tipo_pagamento', dados_base['tipo_pagamento']),
             'faltas_anteriores': max(0, _to_int('faltas_anteriores', dados_base['faltas_anteriores'])),
-            'taxa_historica': min(1.0, max(0.0, _to_float('taxa_historica', dados_base['taxa_historica']))),
+            'taxa_historica': _taxa_percentual_para_decimal('taxa_historica', dados_base['taxa_historica']),
             'tempo_como_paciente': max(1, _to_int('tempo_como_paciente', dados_base['tempo_como_paciente'])),
             'dia_semana': request.form.get('dia_semana', dados_base['dia_semana']),
             'turno': request.form.get('turno', dados_base['turno']),
@@ -98,6 +108,13 @@ def simular():
         if paciente:
             resultado['paciente'] = {'id': paciente['id'], 'nome': paciente['nome']}
             resultado['base_origem'] = 'paciente_base'
+            if proxima_consulta:
+                resultado['consulta_reagendavel'] = {
+                    'id': proxima_consulta['id'],
+                    'data': proxima_consulta['data'],
+                    'horario': proxima_consulta['horario'],
+                    'procedimento': proxima_consulta['procedimento']
+                }
         
         pacientes = listar_pacientes_para_simulacao()
         return render_template('simulacao.html', 
@@ -128,7 +145,7 @@ def carregar_paciente(paciente_id):
         'faixa_etaria': paciente['faixa_etaria'],
         'tipo_pagamento': paciente['tipo_pagamento'],
         'faltas_anteriores': int(paciente['faltas_anteriores']),
-        'taxa_historica': float(paciente['taxa_historica']),
+        'taxa_historica': round(float(paciente['taxa_historica']) * 100.0, 1),
         'tempo_como_paciente': int(paciente['tempo_como_paciente']),
         'dia_semana': hoje.strftime('%A'),
         'turno': 'Tarde',

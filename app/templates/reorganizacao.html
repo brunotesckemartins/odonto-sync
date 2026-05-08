@@ -9,13 +9,19 @@
 </div>
 
 {% if consultas %}
+{% if mostrando_monitoramento %}
+<div class="alert alert-info">
+    Nenhuma consulta com risco alto encontrada no período. Exibindo as próximas consultas com maior risco para monitoramento preventivo.
+</div>
+{% else %}
 <div class="alert alert-warning">
     <strong>{{ consultas|length }} consulta(s)</strong> identificadas com alto risco de falta. Recomenda-se buscar substitutos.
 </div>
+{% endif %}
 
 <div class="cards-grid">
     {% for consulta in consultas %}
-    <div class="card">
+    <div class="card" id="consulta-card-{{ consulta.id }}">
         <div class="card-title">
             {{ consulta.horario }} - {{ consulta.nome }}
         </div>
@@ -38,9 +44,15 @@
             <button onclick="buscarSubstitutos({{ consulta.id }})" style="width: 100%; margin-top: 1rem;">
                 Buscar Substitutos
             </button>
+            <button onclick="buscarReagendamento({{ consulta.id }})" style="width: 100%; margin-top: 0.5rem;">
+                Sugerir Reagendamento Inteligente
+            </button>
             
             <div id="substitutos-{{ consulta.id }}" style="display:none; margin-top: 1rem;">
                 <!-- Substitutos serão carregados aqui via JavaScript -->
+            </div>
+            <div id="reagendamento-{{ consulta.id }}" style="display:none; margin-top: 1rem;">
+                <!-- Reagendamentos serão carregados aqui via JavaScript -->
             </div>
         </div>
     </div>
@@ -49,7 +61,7 @@
 
 {% else %}
 <div class="alert alert-success">
-    <strong>Excelente!</strong> Não há consultas de alto risco no momento.
+    <strong>Excelente!</strong> Não há consultas para reorganização no período analisado.
 </div>
 {% endif %}
 

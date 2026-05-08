@@ -11,6 +11,8 @@ services:
       WEATHER_API_KEY: ${WEATHER_API_KEY:-}
       USE_WEATHER_API: ${USE_WEATHER_API:-False}
       USE_AI_SUGGESTIONS: ${USE_AI_SUGGESTIONS:-True}
+      BOOTSTRAP_ON_START: ${BOOTSTRAP_ON_START:-True}
+      BOOTSTRAP_REFRESH_DATA: ${BOOTSTRAP_REFRESH_DATA:-False}
     volumes:
       - ./dados:/app/dados
       - ./modelo:/app/modelo
