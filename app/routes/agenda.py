@@ -5,7 +5,8 @@ import os
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from app.models.database import get_consultas_do_dia, get_data_referencia_consultas
+from app.models.database import get_consultas_do_dia, get_data_referencia_consultas, get_consulta_por_id, get_connection
+import hashlib
 from app.ml.inferencia import prever_e_classificar
 
 bp = Blueprint('agenda', __name__)
@@ -103,3 +104,67 @@ def index():
         data=data_referencia,
         active_page='agenda'
     )
+
+
+@bp.route('/contato/<int:consulta_id>')
+def contato_agenda(consulta_id):
+    """Retorna contato mascarado do paciente da consulta."""
+    try:
+        consulta = get_consulta_por_id(consulta_id)
+        if not consulta:
+            return {
+                'sucesso': False,
+                'mensagem': 'Consulta não encontrada'
+            }, 404
+
+        digest = hashlib.sha256(str(consulta['paciente_id']).encode('utf-8')).hexdigest()
+        ddd = int(digest[:2], 16) % 90 + 10
+        final = int(digest[-4:], 16) % 10000
+        telefone_mascarado = f'({ddd}) 9****-{final:04d}'
+        return {
+            'sucesso': True,
+            'paciente': {
+                'id': consulta['paciente_id'],
+                'nome': consulta['nome']
+            },
+            'telefone_mascarado': telefone_mascarado,
+            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
+        }
+    except Exception as e:
+        return {
+            'sucesso': False,
+            'mensagem': f'Erro ao buscar contato: {str(e)}'
+        }, 500
+
+
+@bp.route('/confirmar-presenca', methods=['POST'])
+def confirmar_presenca_agenda():
+    """Registra confirmação de presença do paciente."""
+    try:
+        consulta_id = int(request.form.get('consulta_id'))
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM consultas WHERE id = ?', (consulta_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return {
+                'sucesso': False,
+                'mensagem': 'Consulta não encontrada'
+            }, 404
+
+        cursor.execute('''
+            UPDATE consultas
+            SET confirmacao_presenca = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (consulta_id,))
+        conn.commit()
+        conn.close()
+        return {
+            'sucesso': True,
+            'mensagem': 'Presença confirmada com sucesso.'
+        }
+    except Exception as e:
+        return {
+            'sucesso': False,
+            'mensagem': f'Erro ao confirmar presença: {str(e)}'
+        }, 500

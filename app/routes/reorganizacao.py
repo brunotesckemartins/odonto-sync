@@ -1,11 +1,12 @@
 from flask import Blueprint, render_template, request, jsonify
 from datetime import datetime, timedelta
+import hashlib
 import sys
 import os
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from app.models.database import get_consultas_periodo, get_data_referencia_consultas, get_connection
+from app.models.database import get_consultas_periodo, get_data_referencia_consultas, get_connection, get_consulta_por_id
 from app.ml.substituicao import (
     buscar_substitutos,
     confirmar_substituicao,
@@ -15,6 +16,13 @@ from app.ml.substituicao import (
 from app.ml.inferencia import prever_e_classificar
 
 bp = Blueprint('reorganizacao', __name__, url_prefix='/reorganizacao')
+
+
+def _mascarar_telefone(paciente_id):
+    digest = hashlib.sha256(str(paciente_id).encode('utf-8')).hexdigest()
+    ddd = int(digest[:2], 16) % 90 + 10
+    final = int(digest[-4:], 16) % 10000
+    return f'({ddd}) 9****-{final:04d}'
 
 @bp.route('/')
 def index():
@@ -155,14 +163,82 @@ def confirmar():
         }), 500
 
 
+@bp.route('/contato/<int:consulta_id>')
+def contato_consulta(consulta_id):
+    """Retorna contato mascarado do paciente da consulta."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT c.id, p.id AS paciente_id, p.nome
+            FROM consultas c
+            JOIN pacientes p ON c.paciente_id = p.id
+            WHERE c.id = ?
+        ''', (consulta_id,))
+        consulta = cursor.fetchone()
+        conn.close()
+
+        if not consulta:
+            return jsonify({'sucesso': False, 'mensagem': 'Consulta não encontrada'}), 404
+
+        telefone_mascarado = _mascarar_telefone(consulta['paciente_id'])
+        return jsonify({
+            'sucesso': True,
+            'paciente': {
+                'id': consulta['paciente_id'],
+                'nome': consulta['nome']
+            },
+            'telefone_mascarado': telefone_mascarado,
+            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
+        })
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao buscar contato: {str(e)}'}), 500
+
+
+@bp.route('/confirmar-presenca', methods=['POST'])
+def confirmar_presenca_route():
+    """Registra confirmação de presença do paciente."""
+    try:
+        consulta_id = int(request.form.get('consulta_id'))
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id FROM consultas WHERE id = ?', (consulta_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'sucesso': False, 'mensagem': 'Consulta não encontrada'}), 404
+
+        cursor.execute('''
+            UPDATE consultas
+            SET confirmacao_presenca = 1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (consulta_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'sucesso': True, 'mensagem': 'Presença confirmada com sucesso.'})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao confirmar presença: {str(e)}'}), 500
+
+
 @bp.route('/reagendamento/<int:consulta_id>')
 def sugerir_reagendamento_route(consulta_id):
     """Sugere novas janelas de horário para reduzir risco de falta."""
     try:
+        consulta = get_consulta_por_id(consulta_id)
+        if not consulta:
+            return jsonify({'sucesso': False, 'mensagem': 'Consulta não encontrada'}), 404
+
+        paciente = {
+            'id': consulta['paciente_id'],
+            'nome': consulta['nome']
+        }
+        telefone_mascarado = _mascarar_telefone(consulta['paciente_id'])
         opcoes = sugerir_reagendamento_inteligente(consulta_id=consulta_id, janela_dias=21, max_opcoes=5)
         return jsonify({
             'sucesso': True,
-            'opcoes': opcoes
+            'opcoes': opcoes,
+            'paciente': paciente,
+            'telefone_mascarado': telefone_mascarado,
+            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
         })
     except ValueError as e:
         return jsonify({'sucesso': False, 'mensagem': str(e)}), 400

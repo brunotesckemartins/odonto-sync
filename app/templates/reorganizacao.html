@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Reorganização de Agenda</h1>
-    <p class="page-subtitle">Gestão de consultas de alto risco - {{ data }}</p>
+    <p class="page-subtitle">Gestão de consultas de alto risco · {{ data }}</p>
 </div>
 
 {% if consultas %}
@@ -21,11 +21,11 @@
 
 <div class="cards-grid">
     {% for consulta in consultas %}
-    <div class="card" id="consulta-card-{{ consulta.id }}">
-        <div class="card-title">
-            {{ consulta.horario }} - {{ consulta.nome }}
-        </div>
-        <div class="card-content">
+        <div class="card" id="consulta-card-{{ consulta.id }}">
+            <div class="card-title">
+                {{ consulta.horario }} - {{ consulta.nome }}
+            </div>
+            <div class="card-content">
             <p><strong>Procedimento:</strong> {{ consulta.procedimento }}</p>
             <p><strong>Tipo:</strong> {{ consulta.tipo_pagamento }}</p>
             <p><strong>Faltas Anteriores:</strong> {{ consulta.faltas_anteriores }}</p>
@@ -41,17 +41,20 @@
                 {{ consulta.risco.recomendacao }}
             </div>
             
-            <button onclick="buscarSubstitutos({{ consulta.id }})" style="width: 100%; margin-top: 1rem;">
-                Buscar Substitutos
+            <button class="secondary-button" onclick="mostrarContatoConfirmacao({{ consulta.id }}, 'reagendar')" style="width: 100%; margin-top: 1rem;">
+                Confirmar presença (LGPD)
+            </button>
+            <button onclick="buscarSubstitutos({{ consulta.id }})" style="width: 100%; margin-top: 0.75rem;">
+                Buscar Substitutos Recomendados
             </button>
             <button onclick="buscarReagendamento({{ consulta.id }})" style="width: 100%; margin-top: 0.5rem;">
                 Sugerir Reagendamento Inteligente
             </button>
             
-            <div id="substitutos-{{ consulta.id }}" style="display:none; margin-top: 1rem;">
+            <div id="substitutos-{{ consulta.id }}" class="details-panel" style="display:none; margin-top: 1rem;">
                 <!-- Substitutos serão carregados aqui via JavaScript -->
             </div>
-            <div id="reagendamento-{{ consulta.id }}" style="display:none; margin-top: 1rem;">
+            <div id="reagendamento-{{ consulta.id }}" class="details-panel" style="display:none; margin-top: 1rem;">
                 <!-- Reagendamentos serão carregados aqui via JavaScript -->
             </div>
         </div>

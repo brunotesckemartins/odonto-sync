@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Agenda do Dia</h1>
-    <p class="page-subtitle">{{ data }}</p>
+    <p class="page-subtitle">{{ data }} · Acompanhe o risco e confirme presenças antes de agir</p>
 </div>
 
 <!-- Stats Cards -->
@@ -13,18 +13,30 @@
     <div class="stat-card info">
         <div class="stat-label">Total</div>
         <div class="stat-value">{{ stats.total }}</div>
+        {% if stats.total > 0 %}
+        <div class="stat-label">100%</div>
+        {% endif %}
     </div>
     <div class="stat-card danger">
         <div class="stat-label">Alto Risco</div>
         <div class="stat-value">{{ stats.alto_risco }}</div>
+        {% if stats.total > 0 %}
+        <div class="stat-label">{{ ((stats.alto_risco / stats.total) * 100) | round(1) }}%</div>
+        {% endif %}
     </div>
     <div class="stat-card warning">
         <div class="stat-label">Médio Risco</div>
         <div class="stat-value">{{ stats.medio_risco }}</div>
+        {% if stats.total > 0 %}
+        <div class="stat-label">{{ ((stats.medio_risco / stats.total) * 100) | round(1) }}%</div>
+        {% endif %}
     </div>
     <div class="stat-card success">
         <div class="stat-label">Baixo Risco</div>
         <div class="stat-value">{{ stats.baixo_risco }}</div>
+        {% if stats.total > 0 %}
+        <div class="stat-label">{{ ((stats.baixo_risco / stats.total) * 100) | round(1) }}%</div>
+        {% endif %}
     </div>
 </div>
 
@@ -75,10 +87,17 @@
                     </span>
                 </td>
                 <td>
-                    <button type="button" class="secondary-button" onclick="buscarReagendamento({{ consulta.id }})">
+                    <button type="button" class="secondary-button" onclick="mostrarContatoConfirmacao({{ consulta.id }}, 'reagendar')">
+                        Confirmar presença
+                    </button>
+                    <button type="button" onclick="buscarReagendamento({{ consulta.id }})" style="margin-top: 0.5rem;">
                         Reagendar
                     </button>
-                    <div id="reagendamento-{{ consulta.id }}" style="display:none; margin-top: 0.75rem;"></div>
+                </td>
+            </tr>
+            <tr id="consulta-panel-{{ consulta.id }}" class="row-details" style="display:none;">
+                <td colspan="9">
+                    <div id="reagendamento-{{ consulta.id }}" class="details-panel"></div>
                 </td>
             </tr>
             {% endfor %}

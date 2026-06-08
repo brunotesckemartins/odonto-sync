@@ -75,21 +75,29 @@ def _gerar_justificativa(candidato, prob_falta):
 
 def _calcular_score_compatibilidade(candidato, prob_falta):
     score = 0.0
-    score += (1 - prob_falta) * 40
-    faltas = min(candidato['faltas_anteriores'], 5)
-    score += (5 - faltas) / 5 * 20
+    score += (1 - prob_falta) * 45
+    faltas = min(candidato['faltas_anteriores'], 6)
+    score += (6 - faltas) / 6 * 18
 
     if candidato['tipo_pagamento'] == 'Particular':
-        score += 20
+        score += 16
     elif candidato['tipo_pagamento'] == 'Convênio':
-        score += 15
+        score += 12
     else:
-        score += 10
+        score += 8
 
-    tempo_norm = min(candidato['tempo_como_paciente'], 60) / 60
-    score += tempo_norm * 10
-    score += (1 - candidato['taxa_historica']) * 10
+    tempo_norm = min(candidato['tempo_como_paciente'], 72) / 72
+    score += tempo_norm * 12
+    score += (1 - candidato['taxa_historica']) * 9
     return round(score, 2)
+
+
+def _calcular_confianca_substituto(score, prob_falta, faltas_anteriores):
+    confiança = 60
+    confiança += (score / 100) * 30
+    confiança += (1 - prob_falta) * 10
+    confiança -= min(faltas_anteriores, 5) * 2
+    return int(min(98, max(40, round(confiança))))
 
 
 def buscar_substitutos(consulta_id, data, horario, n=3):
@@ -134,6 +142,7 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
         )
         prob_falta = prever_risco(dados_consulta)
         score = _calcular_score_compatibilidade(candidato, prob_falta)
+        confianca = _calcular_confianca_substituto(score, prob_falta, candidato['faltas_anteriores'])
         substitutos.append({
             'paciente_id': candidato['id'],
             'nome': candidato['nome'],
@@ -146,7 +155,8 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
             'taxa_historica': candidato['taxa_historica'],
             'compatibilidade': score,
             'justificativa': _gerar_justificativa(candidato, prob_falta),
-            'score': score
+            'score': score,
+            'confianca': confianca
         })
 
     substitutos.sort(key=lambda x: x['score'], reverse=True)
@@ -165,16 +175,16 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
 
 
 def _score_reagendamento(prob_falta_novo, antecedencia_dias, turno, reducao_risco):
-    score = (1 - prob_falta_novo) * 70
-    if 2 <= antecedencia_dias <= 10:
-        score += 10
+    score = (1 - prob_falta_novo) * 68
+    if 2 <= antecedencia_dias <= 12:
+        score += 12
     elif antecedencia_dias > 20:
-        score -= 8
+        score -= 6
     if turno == 'Manhã':
-        score += 8
+        score += 9
     elif turno == 'Noite':
-        score -= 5
-    score += max(0, reducao_risco) * 25
+        score -= 4
+    score += max(0, reducao_risco) * 28
     return round(score, 2)
 
 
@@ -221,6 +231,7 @@ def sugerir_reagendamento_inteligente(consulta_id, janela_dias=21, max_opcoes=5)
             prob_novo = prever_risco(dados_novos)
             reducao = prob_origem - prob_novo
             score = _score_reagendamento(prob_novo, antecedencia, turno, reducao)
+            confianca = int(min(98, max(40, round((score / 100) * 70 + (1 - prob_novo) * 30))))
 
             justificativa = (
                 f'Risco estimado {round(prob_novo * 100, 1)}% '
@@ -234,6 +245,7 @@ def sugerir_reagendamento_inteligente(consulta_id, janela_dias=21, max_opcoes=5)
                 'probabilidade_falta': round(prob_novo * 100, 1),
                 'reducao_risco_pp': round(reducao * 100, 1),
                 'score': score,
+                'confianca': confianca,
                 'justificativa': justificativa
             })
 
@@ -273,7 +285,7 @@ def confirmar_substituicao(consulta_id, paciente_substituto_id, data, horario):
 
         cursor.execute('''
             UPDATE consultas
-            SET paciente_id = ?, updated_at = CURRENT_TIMESTAMP
+            SET paciente_id = ?, status_reorganizacao = 'reorganizada', updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ''', (paciente_substituto_id, consulta_id))
         conn.commit()
@@ -316,6 +328,7 @@ def confirmar_reagendamento(consulta_id, nova_data, novo_horario):
             UPDATE consultas
             SET data = ?, horario = ?, dia_semana = ?, turno = ?,
                 antecedencia_dias = ?, n_remarcacoes = n_remarcacoes + 1,
+                status_reorganizacao = 'reorganizada',
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ''', (

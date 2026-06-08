@@ -44,10 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
 // Buscar Substitutos (Reorganização)
 function buscarSubstitutos(consultaId) {
     const container = document.getElementById(`substitutos-${consultaId}`);
+    const panelRow = document.getElementById(`consulta-panel-${consultaId}`);
     
     // Mostrar loading
     container.innerHTML = '<p class="loading">Buscando substitutos...</p>';
     container.style.display = 'block';
+    if (panelRow) {
+        panelRow.style.display = 'table-row';
+    }
     
     fetch(`/reorganizacao/substitutos/${consultaId}`)
         .then(response => response.json())
@@ -69,8 +73,14 @@ function buscarSubstitutos(consultaId) {
                                     <div class="progress-fill success" style="width: ${100 - sub.probabilidade_falta}%"></div>
                                 </div>
                                 <p class="justificativa">${sub.justificativa}</p>
-                                <p><strong>Score:</strong> ${sub.score}/100</p>
+                                <p><strong>Score:</strong> ${sub.score}/100 · <strong>Confiança:</strong> ${sub.confianca}%</p>
+                                <div class="progress-bar">
+                                    <div class="progress-fill info" style="width: ${sub.confianca}%"></div>
+                                </div>
                             </div>
+                            <button class="secondary-button" onclick="mostrarContatoConfirmacao(${consultaId}, 'substituir', { pacienteId: '${sub.paciente_id}', data: '${data.consulta.data}', horario: '${data.consulta.horario}' })">
+                                Confirmar presença
+                            </button>
                             <button onclick="confirmarSubstituicao(${consultaId}, '${sub.paciente_id}', '${data.consulta.data}', '${data.consulta.horario}')">
                                 Confirmar Substituição
                             </button>
@@ -106,11 +116,16 @@ function mostrarMensagemContainer(consultaId, tipo, mensagem) {
         document.getElementById(`substitutos-${consultaId}`),
         document.getElementById(`reagendamento-${consultaId}`)
     ].filter(Boolean);
+    const panelRow = document.getElementById(`consulta-panel-${consultaId}`);
 
     containers.forEach((container) => {
         container.style.display = 'block';
         container.innerHTML = `<p class="alert alert-${tipo}">${mensagem}</p>`;
     });
+
+    if (panelRow) {
+        panelRow.style.display = 'table-row';
+    }
 }
 
 // Confirmar Substituição
@@ -146,8 +161,12 @@ function confirmarSubstituicao(consultaId, pacienteId, dataConsulta, horario) {
 // Buscar opções de reagendamento inteligente
 function buscarReagendamento(consultaId) {
     const container = document.getElementById(`reagendamento-${consultaId}`);
+    const panelRow = document.getElementById(`consulta-panel-${consultaId}`);
     container.innerHTML = '<p class="loading">Calculando melhores opções de reagendamento...</p>';
     container.style.display = 'block';
+    if (panelRow) {
+        panelRow.style.display = 'table-row';
+    }
 
     fetch(`/reorganizacao/reagendamento/${consultaId}`)
         .then(response => response.json())
@@ -158,6 +177,19 @@ function buscarReagendamento(consultaId) {
             }
 
             let html = '<div class="substitutos-list"><h4>Melhores horários para reagendar:</h4>';
+            html += `
+                <div class="contact-card">
+                    <div class="contact-title">Confirmação prévia</div>
+                    <div class="contact-body">
+                        <p><strong>Paciente:</strong> ${data.paciente.nome}</p>
+                        <p><strong>Contato (LGPD):</strong> ${data.telefone_mascarado}</p>
+                        <p class="contact-note">${data.nota_lgpd}</p>
+                    </div>
+                    <button class="secondary-button" onclick="confirmarPresenca(${consultaId})">
+                        Confirmar presença
+                    </button>
+                </div>
+            `;
             data.opcoes.forEach((opcao) => {
                 html += `
                     <div class="substituto-card">
@@ -168,8 +200,15 @@ function buscarReagendamento(consultaId) {
                         <div class="substituto-body">
                             <p><strong>Probabilidade de falta:</strong> ${opcao.probabilidade_falta}%</p>
                             <p><strong>Redução de risco:</strong> ${opcao.reducao_risco_pp} p.p.</p>
+                            <p><strong>Confiança:</strong> ${opcao.confianca}%</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill info" style="width: ${opcao.confianca}%"></div>
+                            </div>
                             <p class="justificativa">${opcao.justificativa}</p>
                         </div>
+                        <button class="secondary-button" onclick="confirmarPresenca(${consultaId})">
+                            Confirmar presença
+                        </button>
                         <button onclick="confirmarReagendamento(${consultaId}, '${opcao.data}', '${opcao.horario}')">
                             Confirmar Reagendamento
                         </button>
@@ -210,6 +249,96 @@ function confirmarReagendamento(consultaId, data, horario) {
     })
     .catch(error => {
         alert('Erro ao confirmar reagendamento: ' + error.message);
+    });
+}
+
+function mostrarContatoConfirmacao(consultaId, acao, dados = {}) {
+    const container = document.getElementById(`reagendamento-${consultaId}`)
+        || document.getElementById(`substitutos-${consultaId}`);
+    const panelRow = document.getElementById(`consulta-panel-${consultaId}`);
+    if (!container) {
+        return;
+    }
+
+    container.style.display = 'block';
+    container.innerHTML = '<p class="loading">Carregando contato mascarado...</p>';
+    if (panelRow) {
+        panelRow.style.display = 'table-row';
+    }
+
+    const rota = window.location.pathname.startsWith('/reorganizacao')
+        ? `/reorganizacao/contato/${consultaId}`
+        : `/contato/${consultaId}`;
+
+    fetch(rota)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.sucesso) {
+                throw new Error(data.mensagem || 'Falha ao buscar contato.');
+            }
+
+            let html = `
+                <div class="contact-card">
+                    <div class="contact-title">Confirmação prévia</div>
+                    <div class="contact-body">
+                        <p><strong>Paciente:</strong> ${data.paciente.nome}</p>
+                        <p><strong>Contato (LGPD):</strong> ${data.telefone_mascarado}</p>
+                        <p class="contact-note">${data.nota_lgpd}</p>
+                    </div>
+                    <button class="secondary-button" onclick="confirmarPresenca(${consultaId})">
+                        Confirmar presença
+                    </button>
+                </div>
+            `;
+
+            if (acao === 'substituir' && dados.pacienteId) {
+                html += `
+                    <button onclick="confirmarSubstituicao(${consultaId}, '${dados.pacienteId}', '${dados.data}', '${dados.horario}')">
+                        Confirmar Substituição
+                    </button>
+                `;
+            }
+
+            if (acao === 'reagendar' && dados.data && dados.horario) {
+                html += `
+                    <button onclick="confirmarReagendamento(${consultaId}, '${dados.data}', '${dados.horario}')">
+                        Confirmar Reagendamento
+                    </button>
+                `;
+            }
+
+            container.innerHTML = html;
+        })
+        .catch(error => {
+            container.innerHTML = `<p class="alert alert-danger">${error.message}</p>`;
+        });
+}
+
+function confirmarPresenca(consultaId) {
+    const formData = new FormData();
+    formData.append('consulta_id', consultaId);
+
+    const rota = window.location.pathname.startsWith('/reorganizacao')
+        ? '/reorganizacao/confirmar-presenca'
+        : '/confirmar-presenca';
+
+    fetch(rota, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.sucesso) {
+            throw new Error(data.mensagem || 'Falha ao confirmar presença.');
+        }
+        alert(data.mensagem);
+        const row = document.getElementById(`consulta-row-${consultaId}`);
+        if (row) {
+            row.classList.add('presenca-confirmada');
+        }
+    })
+    .catch(error => {
+        alert(`Erro ao confirmar presença: ${error.message}`);
     });
 }
 

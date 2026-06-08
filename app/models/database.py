@@ -6,10 +6,36 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from config import Config
 
+_schema_checked = False
+
+
+def _ensure_schema(conn):
+    global _schema_checked
+    if _schema_checked:
+        return
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='consultas'")
+    if not cursor.fetchone():
+        return
+
+    cursor.execute('PRAGMA table_info(consultas)')
+    colunas = {row[1] for row in cursor.fetchall()}
+
+    if 'status_reorganizacao' not in colunas:
+        cursor.execute("ALTER TABLE consultas ADD COLUMN status_reorganizacao TEXT DEFAULT 'pendente'")
+    if 'confirmacao_presenca' not in colunas:
+        cursor.execute("ALTER TABLE consultas ADD COLUMN confirmacao_presenca INTEGER DEFAULT 0")
+
+    conn.commit()
+    _schema_checked = True
+
+
 def get_connection():
     """Cria e retorna uma conexão com o banco SQLite"""
     conn = sqlite3.connect(Config.DATABASE_PATH)
     conn.row_factory = sqlite3.Row  # Permite acessar colunas por nome
+    _ensure_schema(conn)
     return conn
 
 def init_db():
@@ -54,6 +80,8 @@ def init_db():
             proximo_feriado INTEGER DEFAULT 0,
             compareceu INTEGER,
             risco_calculado REAL,
+            status_reorganizacao TEXT DEFAULT 'pendente',
+            confirmacao_presenca INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (paciente_id) REFERENCES pacientes (id)
@@ -161,7 +189,7 @@ def get_consultas_do_dia(data):
                p.taxa_historica, p.tempo_como_paciente
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.data = ?
+        WHERE c.data = ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
         ORDER BY c.horario
     ''', (data,))
     
@@ -199,13 +227,31 @@ def get_consultas_periodo(data_inicio, data_fim):
                p.taxa_historica, p.tempo_como_paciente
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.data BETWEEN ? AND ?
+        WHERE c.data BETWEEN ? AND ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
         ORDER BY c.data ASC, c.horario ASC
     ''', (data_inicio, data_fim))
 
     consultas = cursor.fetchall()
     conn.close()
     return consultas
+
+
+def get_consulta_por_id(consulta_id):
+    """Busca uma consulta com dados de paciente por ID."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('''
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+               p.taxa_historica, p.tempo_como_paciente
+        FROM consultas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.id = ?
+    ''', (consulta_id,))
+
+    consulta = cursor.fetchone()
+    conn.close()
+    return consulta
 
 def get_data_referencia_consultas(data_referencia):
     """

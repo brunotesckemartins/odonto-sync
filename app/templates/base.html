@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OdontoSync{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         (function () {
             const savedTheme = localStorage.getItem('theme') || 'light';
@@ -18,32 +21,32 @@
     <aside class="sidebar">
         <div class="sidebar-header">
             <h1 class="logo">OdontoSync</h1>
-            <p class="subtitle">Gestão Inteligente de Consultas</p>
+            <p class="subtitle">Agenda inteligente e centrada no paciente</p>
         </div>
         
         <nav class="sidebar-nav">
             <a href="/" class="nav-item {% if active_page == 'agenda' %}active{% endif %}">
-                <span class="icon">&gt;</span>
+                <span class="icon">◎</span>
                 <span>Agenda do Dia</span>
             </a>
             <a href="/simular" class="nav-item {% if active_page == 'simulacao' %}active{% endif %}">
-                <span class="icon">&gt;</span>
+                <span class="icon">◉</span>
                 <span>Simulador de Risco</span>
             </a>
             <a href="/reorganizacao" class="nav-item {% if active_page == 'reorganizacao' %}active{% endif %}">
-                <span class="icon">&gt;</span>
+                <span class="icon">◈</span>
                 <span>Reorganizar Agenda</span>
             </a>
             <a href="/graficos" class="nav-item {% if active_page == 'graficos' %}active{% endif %}">
-                <span class="icon">&gt;</span>
+                <span class="icon">◌</span>
                 <span>Análise e Gráficos</span>
             </a>
         </nav>
         
         <div class="sidebar-footer">
             <button id="theme-toggle" class="theme-toggle" title="Alternar tema">
-                <span class="theme-icon dark-mode">DARK</span>
-                <span class="theme-icon light-mode">LIGHT</span>
+                <span class="theme-icon dark-mode">NOITE</span>
+                <span class="theme-icon light-mode">DIA</span>
             </button>
         </div>
     </aside>
