@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+
+{% block title %}Prontuário Eletrônico — OdontoSync{% endblock %}
+
+{% block content %}
+<style>
+  /* ── PEP-specific styles ── */
+  .pep-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .pep-identity {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+  }
+
+  .pep-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(47, 111, 109, 0.35);
+  }
+
+  .pep-meta h1 {
+    font-family: var(--font-heading);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.15rem;
+    line-height: 1.2;
+  }
+
+  .pep-meta .pep-id {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    letter-spacing: 0.4px;
+  }
+
+  .pep-id .id-chip {
+    display: inline-block;
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.15rem 0.55rem;
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-left: 0.35rem;
+  }
+
+  .lgpd-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: var(--info-bg);
+    color: var(--info);
+    border: 1px solid var(--info);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    align-self: flex-start;
+  }
+
+  /* Stats row */
+  .pep-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .pep-stat {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.2rem 1.4rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pep-stat::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--accent-primary);
+    opacity: 0.4;
+    border-radius: 4px 0 0 4px;
+  }
+
+  .pep-stat.stat-danger::before { background: var(--danger); }
+  .pep-stat.stat-warning::before { background: var(--warning); }
+  .pep-stat.stat-success::before { background: var(--success); }
+  .pep-stat.stat-info::before { background: var(--info); }
+
+  .pep-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .pep-stat .s-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+  }
+
+  .pep-stat .s-value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+    line-height: 1;
+  }
+
+  .pep-stat.stat-danger .s-value { color: var(--danger); }
+  .pep-stat.stat-warning .s-value { color: var(--warning); }
+  .pep-stat.stat-success .s-value { color: var(--success); }
+  .pep-stat.stat-info .s-value { color: var(--info); }
+
+  .pep-stat .s-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+  }
+
+  /* Two-column layout */
+  .pep-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 1024px) {
+    .pep-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* Form card */
+  .pep-form-card {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+  }
+
+  .pep-form-card-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(120deg, rgba(47, 111, 109, 0.07), rgba(197, 140, 75, 0.07));
+  }
+
+  .pep-form-card-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .pep-form-card-header p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .pep-form-body {
+    padding: 2rem;
+  }
+
+  .field-row {
+    margin-bottom: 1.5rem;
+  }
+
+  .field-row label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+
+  .field-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background-color: var(--bg-secondary);
+    border-radius: 5px;
+    font-size: 0.75rem;
+    color: var(--accent-secondary);
+    font-style: normal;
+  }
+
+  .field-row select {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c544b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.9rem center;
+    padding-right: 2.5rem;
+    cursor: pointer;
+  }
+
+  [data-theme="dark"] .field-row select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c7bdb1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  }
+
+  .field-row select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(47, 111, 109, 0.15);
+  }
+
+  .field-hint {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin-top: 0.3rem;
+  }
+
+  .pep-submit-btn {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(47, 111, 109, 0.3);
+    letter-spacing: 0.3px;
+  }
+
+  .pep-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(47, 111, 109, 0.4);
+  }
+
+  .pep-submit-btn:active {
+    transform: translateY(0);
+  }
+
+  /* Info panel */
+  .pep-info-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .info-card {
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: var(--transition);
+  }
+
+  .info-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .info-card-header {
+    padding: 1rem 1.4rem;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-secondary);
+  }
+
+  .info-card-body {
+    padding: 1.2rem 1.4rem;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+  }
+
+  .info-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .info-row .ir-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .info-row .ir-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    text-align: right;
+  }
+
+  /* Complexity indicator */
+  .complexity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  .complexity-pill.Baixa {
+    background-color: var(--success-bg);
+    color: var(--success);
+  }
+
+  .complexity-pill.Média {
+    background-color: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  .complexity-pill.Alta {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  /* Divider */
+  .section-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 1.5rem 0;
+    position: relative;
+  }
+
+  .section-divider span {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--bg-primary);
+    padding: 0 0.75rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  /* Alert refinado */
+  .pep-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    animation: rise-in 0.35s ease both;
+  }
+
+  .pep-alert.success {
+    background-color: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+
+  .pep-alert.danger {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+
+  .pep-alert-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+  }
+
+  /* Taxa bar */
+  .taxa-bar-wrap {
+    margin-top: 0.5rem;
+  }
+
+  .taxa-bar-track {
+    height: 6px;
+    background-color: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .taxa-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s ease;
+  }
+
+  .taxa-bar-fill.low { background-color: var(--success); }
+  .taxa-bar-fill.mid { background-color: var(--warning); }
+  .taxa-bar-fill.high { background-color: var(--danger); }
+
+  .taxa-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 0.3rem;
+  }
+
+  /* Animations */
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pep-header   { animation: rise-in 0.4s ease both; }
+  .pep-stats    { animation: rise-in 0.45s ease both; }
+  .pep-layout   { animation: rise-in 0.5s ease both; }
+</style>
+
+{# ── Compute derived values ── #}
+{% set initials = (paciente.nome_mascarado or 'P')[0] | upper %}
+{% set taxa_pct = (paciente.taxa_historica * 100) | round(1) %}
+{% set taxa_class = 'high' if taxa_pct >= 60 else ('mid' if taxa_pct >= 30 else 'low') %}
+{% set comp = paciente.complexidade_tratamento or 'Baixa' %}
+
+{# ── Header ── #}
+<div class="pep-header">
+  <div class="pep-identity">
+    <div class="pep-avatar">{{ initials }}</div>
+    <div class="pep-meta">
+      <h1>{{ paciente.nome_mascarado }}</h1>
+      <p class="pep-id">
+        Prontuário Eletrônico
+        <span class="id-chip">ID {{ paciente.id }}</span>
+      </p>
+    </div>
+  </div>
+  <div class="lgpd-badge">
+    ◈ Dados mascarados — conformidade LGPD
+  </div>
+</div>
+
+{# ── Flash messages ── #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="pep-alert {{ category }}">
+        <span class="pep-alert-icon">{% if category == 'success' %}✓{% else %}!{% endif %}</span>
+        <span>{{ message }}</span>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{# ── Stats row ── #}
+<div class="pep-stats">
+
+  <div class="pep-stat {% if paciente.faltas_anteriores >= 3 %}stat-danger{% elif paciente.faltas_anteriores >= 1 %}stat-warning{% else %}stat-success{% endif %}">
+    <div class="s-label">Faltas anteriores</div>
+    <div class="s-value">{{ paciente.faltas_anteriores }}</div>
+    <div class="s-sub">ocorrências registradas</div>
+  </div>
+
+  <div class="pep-stat {% if taxa_pct >= 60 %}stat-danger{% elif taxa_pct >= 30 %}stat-warning{% else %}stat-success{% endif %}">
+    <div class="s-label">Taxa histórica de falta</div>
+    <div class="s-value">{{ taxa_pct }}%</div>
+    <div class="taxa-bar-wrap">
+      <div class="taxa-bar-track">
+        <div class="taxa-bar-fill {{ taxa_class }}" style="width: {{ [taxa_pct, 100] | min }}%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pep-stat stat-info">
+    <div class="s-label">Tempo como paciente</div>
+    <div class="s-value">{{ paciente.tempo_como_paciente }}</div>
+    <div class="s-sub">meses de cadastro</div>
+  </div>
+
+  <div class="pep-stat">
+    <div class="s-label">Faixa etária</div>
+    <div class="s-value" style="font-size:1.3rem">{{ paciente.faixa_etaria }}</div>
+    <div class="s-sub">anos</div>
+  </div>
+
+  <div class="pep-stat">
+    <div class="s-label">Tipo de pagamento</div>
+    <div class="s-value" style="font-size:1.1rem; padding-top: 0.15rem">{{ paciente.tipo_pagamento }}</div>
+    <div class="s-sub">&nbsp;</div>
+  </div>
+
+</div>
+
+{# ── Main layout ── #}
+<div class="pep-layout">
+
+  {# ── Clinical form ── #}
+  <div class="pep-form-card">
+    <div class="pep-form-card-header">
+      <h2>Histórico Clínico</h2>
+      <p>Preencha e salve as informações clínicas. Elas alimentam diretamente o modelo de risco da IA.</p>
+    </div>
+    <div class="pep-form-body">
+      <form id="pep-form"
+            method="POST"
+            action="{{ url_for('prontuario.atualizar_prontuario', paciente_id=paciente.id) }}">
+
+        <div class="field-row">
+          <label for="fumante">
+            <i class="field-icon">◌</i>
+            Fumante
+          </label>
+          <select id="fumante" name="fumante" required>
+            <option value="0" {% if paciente.fumante | int == 0 %}selected{% endif %}>Não</option>
+            <option value="1" {% if paciente.fumante | int == 1 %}selected{% endif %}>Sim</option>
+          </select>
+          <p class="field-hint">Tabagismo aumenta o risco de não comparecimento em procedimentos prolongados.</p>
+        </div>
+
+        <div class="field-row">
+          <label for="doenca_cronica">
+            <i class="field-icon">◍</i>
+            Doença Crônica
+          </label>
+          <select id="doenca_cronica" name="doenca_cronica" required>
+            <option value="0" {% if paciente.doenca_cronica | int == 0 %}selected{% endif %}>Não</option>
+            <option value="1" {% if paciente.doenca_cronica | int == 1 %}selected{% endif %}>Sim</option>
+          </select>
+          <p class="field-hint">Inclui diabetes, hipertensão, doenças autoimunes e condições sistêmicas.</p>
+        </div>
+
+        <div class="field-row">
+          <label for="complexidade_tratamento">
+            <i class="field-icon">◈</i>
+            Complexidade do Tratamento
+          </label>
+          <select id="complexidade_tratamento" name="complexidade_tratamento" required>
+            <option value="Baixa" {% if comp == 'Baixa' %}selected{% endif %}>Baixa — consultas de rotina e limpeza</option>
+            <option value="Média" {% if comp == 'Média' %}selected{% endif %}>Média — obturações e pequenas cirurgias</option>
+            <option value="Alta"  {% if comp == 'Alta'  %}selected{% endif %}>Alta — implantes, canais e cirurgias complexas</option>
+          </select>
+          <p class="field-hint">Tratamentos de alta complexidade tendem a ter maior índice de absenteísmo.</p>
+        </div>
+
+        <div class="section-divider"><span>Confirmação</span></div>
+
+        <button type="submit" class="pep-submit-btn" id="btn-salvar">
+          Salvar Histórico Clínico
+        </button>
+
+      </form>
+    </div>
+  </div>
+
+  {# ── Info panels ── #}
+  <div class="pep-info-panel">
+
+    {# Current clinical snapshot #}
+    <div class="info-card">
+      <div class="info-card-header">Snapshot Clínico Atual</div>
+      <div class="info-card-body">
+        <div class="info-row">
+          <span class="ir-label">Fumante</span>
+          <span class="ir-value">
+            {% if paciente.fumante | int == 1 %}
+              <span class="badge badge-warning">Sim</span>
+            {% else %}
+              <span class="badge badge-success">Não</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Doença Crônica</span>
+          <span class="ir-value">
+            {% if paciente.doenca_cronica | int == 1 %}
+              <span class="badge badge-danger">Sim</span>
+            {% else %}
+              <span class="badge badge-success">Não</span>
+            {% endif %}
+          </span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Complexidade</span>
+          <span class="ir-value">
+            <span class="complexity-pill {{ comp }}">{{ comp }}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    {# Risk profile card #}
+    <div class="info-card">
+      <div class="info-card-header">Perfil de Risco de Absenteísmo</div>
+      <div class="info-card-body">
+        <div class="info-row">
+          <span class="ir-label">Faltas registradas</span>
+          <span class="ir-value">{{ paciente.faltas_anteriores }}</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Taxa histórica</span>
+          <span class="ir-value {% if taxa_pct >= 60 %}style="color:var(--danger)"{% endif %}">{{ taxa_pct }}%</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Paciente há</span>
+          <span class="ir-value">{{ paciente.tempo_como_paciente }} meses</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Faixa etária</span>
+          <span class="ir-value">{{ paciente.faixa_etaria }} anos</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Pagamento</span>
+          <span class="ir-value">{{ paciente.tipo_pagamento }}</span>
+        </div>
+      </div>
+    </div>
+
+    {# LGPD card #}
+    <div class="info-card">
+      <div class="info-card-header">Conformidade LGPD</div>
+      <div class="info-card-body">
+        <div class="info-row">
+          <span class="ir-label">Nome exibido</span>
+          <span class="ir-value">Mascarado (iniciais)</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Documento</span>
+          <span class="ir-value">Não armazenado</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Identificador IA</span>
+          <span class="ir-value">Pseudônimo técnico</span>
+        </div>
+        <div class="info-row">
+          <span class="ir-label">Finalidade</span>
+          <span class="ir-value">Previsão de faltas</span>
+        </div>
+      </div>
+    </div>
+
+  </div>{# end pep-info-panel #}
+
+</div>{# end pep-layout #}
+
+<script>
+  /* Visual feedback on save */
+  document.getElementById('pep-form').addEventListener('submit', function () {
+    const btn = document.getElementById('btn-salvar');
+    btn.textContent = 'Salvando…';
+    btn.style.opacity = '0.75';
+    btn.disabled = true;
+  });
+</script>
+{% endblock %}

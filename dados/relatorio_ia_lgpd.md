@@ -2,30 +2,30 @@
 
 ## 1. Resultado do Treinamento
 - **Modelo vencedor:** XGBoost
-- **AUC-ROC:** 0.7325
-- **Recall (faltas):** 0.7175
-- **F1-Score (faltas):** 0.7523
-- **Precisão (faltas):** 0.7905
+- **AUC-ROC:** 0.7221
+- **Recall (faltas):** 0.7074
+- **F1-Score (faltas):** 0.7410
+- **Precisão (faltas):** 0.7780
 
 ## 2. Comparação entre Modelos
 | Modelo | AUC-ROC | Recall | F1-Score |
 |---|---:|---:|---:|
-| Logistic Regression | 0.7145 | 0.6753 | 0.7240 |
-| Random Forest | 0.7241 | 0.7387 | 0.7570 |
-| XGBoost | 0.7325 | 0.7175 | 0.7523 |
+| Logistic Regression | 0.7147 | 0.6721 | 0.7206 |
+| Random Forest | 0.7098 | 0.7230 | 0.7440 |
+| XGBoost | 0.7221 | 0.7074 | 0.7410 |
 
 ## 3. Matriz de Confusão
-- **TN:** 414
-- **FP:** 243
-- **FN:** 361
-- **TP:** 917
+- **TN:** 399
+- **FP:** 258
+- **FN:** 374
+- **TP:** 904
 
 ## 4. Principais Variáveis do Modelo
-- **n_remarcacoes**: 0.3080
-- **faltas_anteriores**: 0.1860
-- **proximo_feriado**: 0.0959
-- **condicao_clima**: 0.0708
-- **antecedencia_dias**: 0.0698
+- **n_remarcacoes**: 0.3430
+- **faltas_anteriores**: 0.1854
+- **proximo_feriado**: 0.0850
+- **antecedencia_dias**: 0.0624
+- **condicao_clima**: 0.0554
 
 ## 5. Variáveis de Usuário Disponíveis (com LGPD)
 ### Usadas no modelo (minimização de dados)
@@ -34,6 +34,9 @@
 - faltas_anteriores
 - taxa_historica
 - tempo_como_paciente
+- fumante
+- doenca_cronica
+- complexidade_tratamento
 - dia_semana
 - turno
 - procedimento

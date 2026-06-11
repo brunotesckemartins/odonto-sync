@@ -29,6 +29,9 @@ def _dados_predicao(paciente, procedimento, data, horario, antecedencia_dias, n_
         'faltas_anteriores': paciente['faltas_anteriores'],
         'taxa_historica': paciente['taxa_historica'],
         'tempo_como_paciente': paciente['tempo_como_paciente'],
+        'fumante': paciente['fumante'],
+        'doenca_cronica': paciente['doenca_cronica'],
+        'complexidade_tratamento': paciente['complexidade_tratamento'],
         'dia_semana': datetime.strptime(data, '%Y-%m-%d').strftime('%A'),
         'turno': _determinar_turno(horario),
         'procedimento': procedimento,
@@ -46,7 +49,8 @@ def _buscar_consulta_e_paciente(consulta_id):
     cursor = conn.cursor()
     cursor.execute('''
         SELECT c.*, p.id AS p_id, p.nome, p.faixa_etaria, p.tipo_pagamento,
-               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente
+               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.id = ?
@@ -105,7 +109,8 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
     cursor = conn.cursor()
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento,
-               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente
+               p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.id = ?

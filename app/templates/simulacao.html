@@ -1,279 +1,626 @@
 {% extends "base.html" %}
-
-{% block title %}Simulação - OdontoSync{% endblock %}
+{% block title %}Simulador de Risco — OdontoSync{% endblock %}
 
 {% block content %}
+<style>
+  /* ── Simulador-specific styles ── */
+  .sim-layout {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  @media (max-width: 1100px) {
+    .sim-layout { grid-template-columns: 1fr; }
+  }
+
+  /* Form card */
+  .sim-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .sim-card-header {
+    padding: 1.2rem 1.8rem;
+    background: linear-gradient(120deg, rgba(47,111,109,0.07), rgba(197,140,75,0.07));
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .sim-card-header h3 {
+    font-family: var(--font-heading);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .sim-card-icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    color: var(--accent-secondary);
+    border: 1px solid var(--border-color);
+    flex-shrink: 0;
+  }
+
+  .sim-card-body {
+    padding: 1.5rem 1.8rem;
+  }
+
+  .sim-field {
+    margin-bottom: 1.2rem;
+  }
+
+  .sim-field label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 0.4rem;
+  }
+
+  .sim-field select,
+  .sim-field input[type="number"],
+  .sim-field input[type="text"] {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c544b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding-right: 2.5rem;
+  }
+
+  .sim-field input[type="number"] {
+    background-image: none;
+    padding-right: 1rem;
+  }
+
+  .sim-field select:focus,
+  .sim-field input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(47,111,109,0.15);
+  }
+
+  .sim-field .hint {
+    font-size: 0.76rem;
+    color: var(--text-secondary);
+    margin-top: 0.3rem;
+  }
+
+  .sim-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  .sim-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 600px) {
+    .sim-grid-2, .sim-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* Patient selector */
+  .paciente-selector {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-end;
+  }
+
+  .paciente-selector .sim-field {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
+  .btn-load {
+    padding: 0.8rem 1.2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .btn-load:hover { background: var(--bg-tertiary); transform: translateY(-1px); }
+
+  .paciente-status {
+    font-size: 0.8rem;
+    color: var(--accent-primary);
+    font-weight: 600;
+    margin-top: 0.4rem;
+    min-height: 1.2rem;
+  }
+
+  /* Submit button */
+  .sim-submit {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 12px rgba(47,111,109,0.3);
+    letter-spacing: 0.3px;
+    margin-top: 0.5rem;
+  }
+
+  .sim-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(47,111,109,0.4);
+  }
+
+  /* Result panel */
+  .result-panel {
+    position: sticky;
+    top: 2rem;
+  }
+
+  .result-big-number {
+    font-size: 4rem;
+    font-weight: 700;
+    font-family: var(--font-heading);
+    line-height: 1;
+    text-align: center;
+    padding: 1.5rem 0 0.5rem;
+  }
+
+  .result-badge-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .result-badge-lg {
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .result-rec {
+    padding: 1rem 1.2rem;
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--accent-primary);
+    border-radius: 8px;
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+
+  .result-patient-row {
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  .result-patient-row strong { color: var(--text-primary); }
+
+  /* Error alert */
+  .sim-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+  }
+
+  /* Info chips */
+  .tips-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tip-chip {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.9rem 1.1rem;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .tip-chip h4 {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+
+  .tip-chip p {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  .reagendar-section {
+    margin-top: 1rem;
+    padding: 1rem 1.2rem;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+  }
+
+  .reagendar-section p {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  .reagendar-section strong { color: var(--text-primary); }
+
+  [data-theme="dark"] .sim-field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23c7bdb1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  }
+
+  /* Animations */
+  .sim-card { animation: rise-in 0.45s ease both; }
+  .sim-card:nth-child(2) { animation-delay: 0.05s; }
+  .sim-card:nth-child(3) { animation-delay: 0.1s; }
+</style>
+
 <div class="page-header">
-    <h1 class="page-title">Simulador de Risco</h1>
-    <p class="page-subtitle">Simule risco por paciente da base ou ajuste manualmente os parâmetros com clareza</p>
+  <h1 class="page-title">Simulador de Risco</h1>
+  <p class="page-subtitle">Preveja a probabilidade de falta usando o modelo de IA treinado com histórico real</p>
 </div>
-
-<div class="simulacao-hero">
-    <div class="simulacao-hero-card">
-        <h3>Análise preditiva de faltas</h3>
-        <p>Selecione um paciente para preencher automaticamente os dados mais recentes ou ajuste os parâmetros manualmente.</p>
-    </div>
-    <div class="simulacao-hero-card">
-        <h3>Taxa histórica amigável</h3>
-        <p>A taxa histórica agora é exibida em <strong>percentual (%)</strong> para facilitar interpretação da equipe.</p>
-    </div>
-</div>
-
-{% if resultado %}
-<div class="result-card">
-    <h3 class="result-title">Resultado da Simulação</h3>
-
-    {% if resultado.paciente %}
-    <div class="result-patient">
-        <strong>Paciente:</strong> {{ resultado.paciente.nome }} ({{ resultado.paciente.id }})
-    </div>
-    {% endif %}
-    
-    <div class="result-centered">
-        <div class="result-probability" style="color: var(--{{ resultado.cor }});">
-            {{ resultado.probabilidade }}%
-        </div>
-        <span class="badge badge-{{ resultado.cor }} result-badge">
-            {{ resultado.categoria }} Risco
-        </span>
-    </div>
-    
-    <div class="result-recommendation">
-        {{ resultado.recomendacao }}
-    </div>
-
-    {% if resultado.consulta_reagendavel %}
-    <div style="margin-top: 1rem;">
-        <p>
-            <strong>Próxima consulta do paciente:</strong>
-            {{ resultado.consulta_reagendavel.data }} às {{ resultado.consulta_reagendavel.horario }}
-            ({{ resultado.consulta_reagendavel.procedimento }})
-        </p>
-        <button type="button"
-                onclick="buscarReagendamento({{ resultado.consulta_reagendavel.id }})">
-            Sugerir Reagendamento desta Consulta
-        </button>
-        <div id="reagendamento-{{ resultado.consulta_reagendavel.id }}" style="display:none; margin-top: 1rem;"></div>
-    </div>
-    {% endif %}
-</div>
-{% endif %}
 
 {% if erro %}
-<div class="alert alert-danger">
-    <strong>Erro:</strong> {{ erro }}
+<div class="sim-error">
+  <span>!</span>
+  <span><strong>Erro:</strong> {{ erro }}</span>
 </div>
 {% endif %}
 
-<div class="form-container">
+<div class="tips-grid">
+  <div class="tip-chip">
+    <h4>Análise preditiva</h4>
+    <p>Selecione um paciente da base para preencher automaticamente com histórico real.</p>
+  </div>
+  <div class="tip-chip">
+    <h4>Taxa histórica em %</h4>
+    <p>Informe de 0 a 100. Ex: 35 significa 35% de faltas no histórico do paciente.</p>
+  </div>
+</div>
+
+<div class="sim-layout">
+
+  {# ── Form column ── #}
+  <div>
     <form method="POST" id="simulacao-form">
-        <div class="form-section">
-            <h3 class="form-section-title">Simular com paciente da base</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="paciente_id">Paciente cadastrado</label>
-                    <select name="paciente_id" id="paciente_id">
-                        <option value="">Selecionar manualmente (sem paciente da base)</option>
-                        {% for paciente in pacientes or [] %}
-                        <option value="{{ paciente.id }}" {% if paciente_selecionado == paciente.id %}selected{% endif %}>
-                            {{ paciente.nome }} ({{ paciente.id }}) · {{ paciente.tipo_pagamento }} · faltas: {{ paciente.faltas_anteriores }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <small class="form-hint">Ao selecionar, os campos abaixo são preenchidos automaticamente com o histórico mais recente.</small>
-                    <small class="form-hint" id="paciente-carregado-status"></small>
-                </div>
-                <div class="form-group align-end">
-                    <button type="button" class="secondary-button" id="btn-carregar-paciente">Carregar dados do paciente</button>
-                </div>
+
+      {# Seletor de paciente #}
+      <div class="sim-card">
+        <div class="sim-card-header">
+          <span class="sim-card-icon">◎</span>
+          <h3>Paciente da Base</h3>
+        </div>
+        <div class="sim-card-body">
+          <div class="paciente-selector">
+            <div class="sim-field">
+              <label for="paciente_id">Selecionar paciente cadastrado</label>
+              <select name="paciente_id" id="paciente_id">
+                <option value="">Preencher manualmente</option>
+                {% for p in pacientes or [] %}
+                <option value="{{ p.id }}"
+                  {% if paciente_selecionado == p.id %}selected{% endif %}>
+                  {{ p.nome }} · {{ p.tipo_pagamento }} · {{ p.faltas_anteriores }} falta(s)
+                </option>
+                {% endfor %}
+              </select>
             </div>
+            <button type="button" class="btn-load" id="btn-carregar-paciente">
+              Carregar
+            </button>
+          </div>
+          <div class="paciente-status" id="paciente-carregado-status"></div>
+        </div>
+      </div>
+
+      {# Dados do paciente #}
+      <div class="sim-card">
+        <div class="sim-card-header">
+          <span class="sim-card-icon">◍</span>
+          <h3>Dados do Paciente</h3>
+        </div>
+        <div class="sim-card-body">
+          <div class="sim-grid-2">
+            <div class="sim-field">
+              <label for="faixa_etaria">Faixa Etária</label>
+              <select name="faixa_etaria" id="faixa_etaria" required>
+                <option value="0-17"  {% if dados and dados.faixa_etaria == '0-17'  %}selected{% endif %}>0–17 anos</option>
+                <option value="18-35" {% if dados and dados.faixa_etaria == '18-35' %}selected{% elif not dados %}{% endif %}>18–35 anos</option>
+                <option value="36-60" {% if not dados or (dados and dados.faixa_etaria == '36-60') %}selected{% endif %}>36–60 anos</option>
+                <option value="60+"   {% if dados and dados.faixa_etaria == '60+'   %}selected{% endif %}>60+ anos</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="tipo_pagamento">Tipo de Pagamento</label>
+              <select name="tipo_pagamento" id="tipo_pagamento" required>
+                <option value="Particular" {% if dados and dados.tipo_pagamento == 'Particular' %}selected{% endif %}>Particular</option>
+                <option value="Convênio"  {% if not dados or (dados and dados.tipo_pagamento == 'Convênio') %}selected{% endif %}>Convênio</option>
+                <option value="SUS"       {% if dados and dados.tipo_pagamento == 'SUS'       %}selected{% endif %}>SUS</option>
+              </select>
+            </div>
+          </div>
+          <div class="sim-grid-3">
+            <div class="sim-field">
+              <label for="faltas_anteriores">Faltas anteriores</label>
+              <input type="number" name="faltas_anteriores" id="faltas_anteriores"
+                     value="{{ dados.faltas_anteriores if dados else 0 }}" min="0" max="20" required>
+            </div>
+            <div class="sim-field">
+              <label for="taxa_historica">Taxa histórica (%)</label>
+              <input type="number" name="taxa_historica" id="taxa_historica"
+                     value="{{ ((dados.taxa_historica * 100) if dados else 0)|round(1) }}"
+                     min="0" max="100" step="0.1" required>
+            </div>
+            <div class="sim-field">
+              <label for="tempo_como_paciente">Tempo (meses)</label>
+              <input type="number" name="tempo_como_paciente" id="tempo_como_paciente"
+                     value="{{ dados.tempo_como_paciente if dados else 12 }}" min="1" max="240" required>
+            </div>
+          </div>
+          <div class="sim-grid-3">
+            <div class="sim-field">
+              <label for="fumante">Fumante</label>
+              <select name="fumante" id="fumante">
+                <option value="0" {% if not dados or dados.fumante == 0 %}selected{% endif %}>Não</option>
+                <option value="1" {% if dados and dados.fumante == 1 %}selected{% endif %}>Sim</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="doenca_cronica">Doença crônica</label>
+              <select name="doenca_cronica" id="doenca_cronica">
+                <option value="0" {% if not dados or dados.doenca_cronica == 0 %}selected{% endif %}>Não</option>
+                <option value="1" {% if dados and dados.doenca_cronica == 1 %}selected{% endif %}>Sim</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="complexidade_tratamento">Complexidade</label>
+              <select name="complexidade_tratamento" id="complexidade_tratamento">
+                <option value="Baixa" {% if not dados or dados.complexidade_tratamento == 'Baixa' %}selected{% endif %}>Baixa</option>
+                <option value="Média" {% if dados and dados.complexidade_tratamento == 'Média' %}selected{% endif %}>Média</option>
+                <option value="Alta"  {% if dados and dados.complexidade_tratamento == 'Alta'  %}selected{% endif %}>Alta</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {# Dados da consulta #}
+      <div class="sim-card">
+        <div class="sim-card-header">
+          <span class="sim-card-icon">◈</span>
+          <h3>Dados da Consulta</h3>
+        </div>
+        <div class="sim-card-body">
+          <div class="sim-grid-3">
+            <div class="sim-field">
+              <label for="dia_semana">Dia da semana</label>
+              <select name="dia_semana" id="dia_semana" required>
+                <option value="Monday"    {% if dados and dados.dia_semana == 'Monday'    %}selected{% endif %}>Segunda</option>
+                <option value="Tuesday"   {% if dados and dados.dia_semana == 'Tuesday'   %}selected{% endif %}>Terça</option>
+                <option value="Wednesday" {% if not dados or (dados and dados.dia_semana == 'Wednesday') %}selected{% endif %}>Quarta</option>
+                <option value="Thursday"  {% if dados and dados.dia_semana == 'Thursday'  %}selected{% endif %}>Quinta</option>
+                <option value="Friday"    {% if dados and dados.dia_semana == 'Friday'    %}selected{% endif %}>Sexta</option>
+                <option value="Saturday"  {% if dados and dados.dia_semana == 'Saturday'  %}selected{% endif %}>Sábado</option>
+                <option value="Sunday"    {% if dados and dados.dia_semana == 'Sunday'    %}selected{% endif %}>Domingo</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="turno">Turno</label>
+              <select name="turno" id="turno" required>
+                <option value="Manhã" {% if dados and dados.turno == 'Manhã' %}selected{% endif %}>Manhã</option>
+                <option value="Tarde" {% if not dados or (dados and dados.turno == 'Tarde') %}selected{% endif %}>Tarde</option>
+                <option value="Noite" {% if dados and dados.turno == 'Noite' %}selected{% endif %}>Noite</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="procedimento">Procedimento</label>
+              <select name="procedimento" id="procedimento" required>
+                <option value="Consulta"    {% if dados and dados.procedimento == 'Consulta'    %}selected{% endif %}>Consulta</option>
+                <option value="Limpeza"     {% if not dados or (dados and dados.procedimento == 'Limpeza') %}selected{% endif %}>Limpeza</option>
+                <option value="Obturação"   {% if dados and dados.procedimento == 'Obturação'   %}selected{% endif %}>Obturação</option>
+                <option value="Extração"    {% if dados and dados.procedimento == 'Extração'    %}selected{% endif %}>Extração</option>
+                <option value="Canal"       {% if dados and dados.procedimento == 'Canal'       %}selected{% endif %}>Canal</option>
+                <option value="Clareamento" {% if dados and dados.procedimento == 'Clareamento' %}selected{% endif %}>Clareamento</option>
+              </select>
+            </div>
+          </div>
+          <div class="sim-grid-3">
+            <div class="sim-field">
+              <label for="antecedencia_dias">Antecedência (dias)</label>
+              <input type="number" name="antecedencia_dias" id="antecedencia_dias"
+                     value="{{ dados.antecedencia_dias if dados else 7 }}" min="1" max="90" required>
+            </div>
+            <div class="sim-field">
+              <label for="e_retorno">É retorno?</label>
+              <select name="e_retorno" id="e_retorno" required>
+                <option value="0" {% if not dados or dados.e_retorno == 0 %}selected{% endif %}>Não</option>
+                <option value="1" {% if dados and dados.e_retorno == 1 %}selected{% endif %}>Sim</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="n_remarcacoes">Nº de remarcações</label>
+              <input type="number" name="n_remarcacoes" id="n_remarcacoes"
+                     value="{{ dados.n_remarcacoes if dados else 0 }}" min="0" max="12" required>
+            </div>
+          </div>
+          <div class="sim-grid-3">
+            <div class="sim-field">
+              <label for="proximo_feriado">Próx. a feriado?</label>
+              <select name="proximo_feriado" id="proximo_feriado" required>
+                <option value="0" {% if not dados or dados.proximo_feriado == 0 %}selected{% endif %}>Não</option>
+                <option value="1" {% if dados and dados.proximo_feriado == 1 %}selected{% endif %}>Sim</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="condicao_clima">Clima</label>
+              <select name="condicao_clima" id="condicao_clima" required>
+                <option value="ensolarado" {% if not dados or dados.condicao_clima == 'ensolarado' %}selected{% endif %}>Ensolarado</option>
+                <option value="nublado"    {% if dados and dados.condicao_clima == 'nublado'    %}selected{% endif %}>Nublado</option>
+                <option value="chuvoso"    {% if dados and dados.condicao_clima == 'chuvoso'    %}selected{% endif %}>Chuvoso</option>
+                <option value="tempestade" {% if dados and dados.condicao_clima == 'tempestade' %}selected{% endif %}>Tempestade</option>
+              </select>
+            </div>
+            <div class="sim-field">
+              <label for="temperatura">Temperatura (°C)</label>
+              <input type="number" name="temperatura" id="temperatura"
+                     value="{{ dados.temperatura if dados else 25 }}" min="10" max="45" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="sim-submit" id="btn-simular">Simular Risco</button>
+    </form>
+  </div>
+
+  {# ── Result column ── #}
+  <div class="result-panel">
+    {% if resultado %}
+    <div class="sim-card">
+      <div class="sim-card-header">
+        <span class="sim-card-icon">◌</span>
+        <h3>Resultado</h3>
+      </div>
+      <div class="sim-card-body">
+        {% if resultado.paciente %}
+        <div class="result-patient-row">
+          <strong>{{ resultado.paciente.nome }}</strong><br>
+          <span>{{ resultado.paciente.id }}</span>
+        </div>
+        {% endif %}
+
+        <div class="result-big-number" style="color: var(--{{ resultado.cor }})">
+          {{ resultado.probabilidade }}%
+        </div>
+        <div class="result-badge-row">
+          <span class="badge badge-{{ resultado.cor }} result-badge-lg">
+            Risco {{ resultado.categoria }}
+          </span>
         </div>
 
-        <!-- Dados do Paciente -->
-        <div class="form-section">
-            <h3 class="form-section-title">Dados do Paciente</h3>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="faixa_etaria">Faixa Etária</label>
-                    <select name="faixa_etaria" id="faixa_etaria" required>
-                        <option value="0-17" {% if dados and dados.faixa_etaria == '0-17' %}selected{% elif not dados %}{% endif %}>0-17 anos</option>
-                        <option value="18-35" {% if dados and dados.faixa_etaria == '18-35' %}selected{% endif %}>18-35 anos</option>
-                        <option value="36-60" {% if not dados or (dados and dados.faixa_etaria == '36-60') %}selected{% endif %}>36-60 anos</option>
-                        <option value="60+" {% if dados and dados.faixa_etaria == '60+' %}selected{% endif %}>60+ anos</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="tipo_pagamento">Tipo de Pagamento</label>
-                    <select name="tipo_pagamento" id="tipo_pagamento" required>
-                        <option value="Particular" {% if dados and dados.tipo_pagamento == 'Particular' %}selected{% endif %}>Particular</option>
-                        <option value="Convênio" {% if not dados or (dados and dados.tipo_pagamento == 'Convênio') %}selected{% endif %}>Convênio</option>
-                        <option value="SUS" {% if dados and dados.tipo_pagamento == 'SUS' %}selected{% endif %}>SUS</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="faltas_anteriores">Faltas Anteriores</label>
-                    <input type="number" name="faltas_anteriores" id="faltas_anteriores" value="{{ dados.faltas_anteriores if dados else 0 }}" min="0" max="20" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="taxa_historica">Taxa Histórica de Faltas (%)</label>
-                    <input type="number" name="taxa_historica" id="taxa_historica" value="{{ ((dados.taxa_historica * 100) if dados else 0)|round(1) }}" min="0" max="100" step="0.1" required>
-                    <small class="form-hint">Exemplo: 35 significa 35% de faltas no histórico.</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="tempo_como_paciente">Tempo como Paciente (meses)</label>
-                    <input type="number" name="tempo_como_paciente" id="tempo_como_paciente" value="{{ dados.tempo_como_paciente if dados else 12 }}" min="1" max="240" required>
-                </div>
-            </div>
+        <div class="result-rec">
+          {{ resultado.recomendacao }}
         </div>
-        
-        <!-- Dados da Consulta -->
-        <div class="form-section">
-            <h3 class="form-section-title">Dados da Consulta</h3>
-            
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="dia_semana">Dia da Semana</label>
-                    <select name="dia_semana" id="dia_semana" required>
-                        <option value="Monday" {% if dados and dados.dia_semana == 'Monday' %}selected{% endif %}>Segunda-feira</option>
-                        <option value="Tuesday" {% if dados and dados.dia_semana == 'Tuesday' %}selected{% endif %}>Terça-feira</option>
-                        <option value="Wednesday" {% if not dados or (dados and dados.dia_semana == 'Wednesday') %}selected{% endif %}>Quarta-feira</option>
-                        <option value="Thursday" {% if dados and dados.dia_semana == 'Thursday' %}selected{% endif %}>Quinta-feira</option>
-                        <option value="Friday" {% if dados and dados.dia_semana == 'Friday' %}selected{% endif %}>Sexta-feira</option>
-                        <option value="Saturday" {% if dados and dados.dia_semana == 'Saturday' %}selected{% endif %}>Sábado</option>
-                        <option value="Sunday" {% if dados and dados.dia_semana == 'Sunday' %}selected{% endif %}>Domingo</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="turno">Turno</label>
-                    <select name="turno" id="turno" required>
-                        <option value="Manhã" {% if dados and dados.turno == 'Manhã' %}selected{% endif %}>Manhã</option>
-                        <option value="Tarde" {% if not dados or (dados and dados.turno == 'Tarde') %}selected{% endif %}>Tarde</option>
-                        <option value="Noite" {% if dados and dados.turno == 'Noite' %}selected{% endif %}>Noite</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="procedimento">Procedimento</label>
-                    <select name="procedimento" id="procedimento" required>
-                        <option value="Consulta" {% if dados and dados.procedimento == 'Consulta' %}selected{% endif %}>Consulta</option>
-                        <option value="Limpeza" {% if not dados or (dados and dados.procedimento == 'Limpeza') %}selected{% endif %}>Limpeza</option>
-                        <option value="Obturação" {% if dados and dados.procedimento == 'Obturação' %}selected{% endif %}>Obturação</option>
-                        <option value="Extração" {% if dados and dados.procedimento == 'Extração' %}selected{% endif %}>Extração</option>
-                        <option value="Canal" {% if dados and dados.procedimento == 'Canal' %}selected{% endif %}>Canal</option>
-                        <option value="Clareamento" {% if dados and dados.procedimento == 'Clareamento' %}selected{% endif %}>Clareamento</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="antecedencia_dias">Antecedência (dias)</label>
-                    <input type="number" name="antecedencia_dias" id="antecedencia_dias" value="{{ dados.antecedencia_dias if dados else 7 }}" min="1" max="90" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="e_retorno">É Retorno?</label>
-                    <select name="e_retorno" id="e_retorno" required>
-                        <option value="0" {% if not dados or (dados and dados.e_retorno == 0) %}selected{% endif %}>Não</option>
-                        <option value="1" {% if dados and dados.e_retorno == 1 %}selected{% endif %}>Sim</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="n_remarcacoes">Número de Remarcações</label>
-                    <input type="number" name="n_remarcacoes" id="n_remarcacoes" value="{{ dados.n_remarcacoes if dados else 0 }}" min="0" max="12" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="proximo_feriado">Próximo a Feriado?</label>
-                    <select name="proximo_feriado" id="proximo_feriado" required>
-                        <option value="0" {% if not dados or (dados and dados.proximo_feriado == 0) %}selected{% endif %}>Não</option>
-                        <option value="1" {% if dados and dados.proximo_feriado == 1 %}selected{% endif %}>Sim</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="condicao_clima">Condição Climática</label>
-                    <select name="condicao_clima" id="condicao_clima" required>
-                        <option value="ensolarado" {% if not dados or (dados and dados.condicao_clima == 'ensolarado') %}selected{% endif %}>Ensolarado</option>
-                        <option value="nublado" {% if dados and dados.condicao_clima == 'nublado' %}selected{% endif %}>Nublado</option>
-                        <option value="chuvoso" {% if dados and dados.condicao_clima == 'chuvoso' %}selected{% endif %}>Chuvoso</option>
-                        <option value="tempestade" {% if dados and dados.condicao_clima == 'tempestade' %}selected{% endif %}>Tempestade</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="temperatura">Temperatura (°C)</label>
-                    <input type="number" name="temperatura" id="temperatura" value="{{ dados.temperatura if dados else 25 }}" min="10" max="45" required>
-                </div>
-            </div>
+
+        {% if resultado.consulta_reagendavel %}
+        <div class="reagendar-section">
+          <p>
+            <strong>Próxima consulta:</strong><br>
+            {{ resultado.consulta_reagendavel.data }} às {{ resultado.consulta_reagendavel.horario }}
+            ({{ resultado.consulta_reagendavel.procedimento }})
+          </p>
+          <button type="button" onclick="buscarReagendamento({{ resultado.consulta_reagendavel.id }})">
+            Sugerir Reagendamento
+          </button>
+          <div id="reagendamento-{{ resultado.consulta_reagendavel.id }}" style="margin-top:1rem;"></div>
         </div>
-        
-        <button type="submit">Simular Risco</button>
-    </form>
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <div class="sim-card">
+      <div class="sim-card-body" style="text-align:center; padding: 3rem 1.5rem; color: var(--text-secondary);">
+        <div style="font-size:2.5rem; opacity:0.3; margin-bottom:1rem;">◎</div>
+        <p style="font-size:0.95rem;">Preencha o formulário e clique em <strong>Simular Risco</strong> para ver o resultado aqui.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const btn = document.getElementById('btn-carregar-paciente');
-    const pacienteSelect = document.getElementById('paciente_id');
+    const sel = document.getElementById('paciente_id');
     const statusEl = document.getElementById('paciente-carregado-status');
-
-    if (!btn || !pacienteSelect || !statusEl) {
-        return;
-    }
+    if (!btn || !sel) return;
 
     const campos = [
-        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 'taxa_historica',
-        'tempo_como_paciente', 'dia_semana', 'turno', 'procedimento',
-        'antecedencia_dias', 'e_retorno', 'n_remarcacoes', 'proximo_feriado',
-        'condicao_clima', 'temperatura'
+      'faixa_etaria','tipo_pagamento','faltas_anteriores','taxa_historica',
+      'tempo_como_paciente','fumante','doenca_cronica','complexidade_tratamento',
+      'dia_semana','turno','procedimento','antecedencia_dias',
+      'e_retorno','n_remarcacoes','proximo_feriado','condicao_clima','temperatura'
     ];
 
-    const preencherCampos = (dados) => {
-        campos.forEach((campo) => {
-            const input = document.getElementById(campo);
-            if (!input || dados[campo] === undefined || dados[campo] === null) return;
-            input.value = dados[campo];
-        });
+    const preencher = (dados) => {
+      campos.forEach(c => {
+        const el = document.getElementById(c);
+        if (el && dados[c] !== undefined && dados[c] !== null) el.value = dados[c];
+      });
     };
 
-    const carregarPaciente = async () => {
-        const pacienteId = pacienteSelect.value;
-        if (!pacienteId) {
-            statusEl.textContent = '';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.textContent = 'Carregando...';
-        statusEl.textContent = 'Buscando histórico...';
-
-        try {
-            const response = await fetch(`/simular/paciente/${pacienteId}`);
-            const data = await response.json();
-
-            if (!response.ok || !data.sucesso) {
-                throw new Error(data.erro || 'Falha ao carregar paciente.');
-            }
-
-            preencherCampos(data.dados);
-            statusEl.textContent = `Dados carregados de ${data.paciente.nome} (${data.paciente.id}).`;
-        } catch (error) {
-            alert(error.message);
-            statusEl.textContent = 'Não foi possível carregar os dados do paciente.';
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Carregar dados do paciente';
-        }
+    const carregar = async () => {
+      const id = sel.value;
+      if (!id) { statusEl.textContent = ''; return; }
+      btn.disabled = true; btn.textContent = '…';
+      statusEl.textContent = 'Buscando histórico…';
+      try {
+        const r = await fetch(`/simular/paciente/${id}`);
+        const d = await r.json();
+        if (!d.sucesso) throw new Error(d.erro || 'Falha.');
+        preencher(d.dados);
+        statusEl.textContent = `Dados carregados: ${d.paciente.nome}`;
+      } catch(e) {
+        statusEl.textContent = 'Erro ao carregar dados.';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Carregar';
+      }
     };
 
-    btn.addEventListener('click', carregarPaciente);
-    pacienteSelect.addEventListener('change', carregarPaciente);
+    btn.addEventListener('click', carregar);
+    sel.addEventListener('change', carregar);
+
+    // Submit feedback
+    document.getElementById('simulacao-form').addEventListener('submit', () => {
+      const b = document.getElementById('btn-simular');
+      b.textContent = 'Calculando…'; b.style.opacity = '0.75'; b.disabled = true;
+    });
 });
 </script>
 {% endblock %}

@@ -1,112 +1,647 @@
 {% extends "base.html" %}
-
-{% block title %}Agenda - OdontoSync{% endblock %}
+{% block title %}Agenda do Dia — OdontoSync{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<style>
+  /* ── Agenda-specific styles ── */
+  .agenda-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .toolbar-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-hover));
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 3px 10px rgba(47,111,109,0.3);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 16px rgba(47,111,109,0.4);
+  }
+
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.4rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .btn-secondary:hover {
+    background: var(--bg-secondary);
+    transform: translateY(-1px);
+  }
+
+  /* Table enhancements */
+  .risco-cell {
+    min-width: 120px;
+  }
+
+  .action-cell {
+    min-width: 160px;
+  }
+
+  .action-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .action-btn {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .action-btn.primary {
+    background: var(--accent-primary);
+    color: #fff;
+  }
+  .action-btn.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+
+  .action-btn.ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+  }
+  .action-btn.ghost:hover { background: var(--bg-secondary); color: var(--text-primary); }
+
+  .action-btn.danger-ghost {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger-bg);
+  }
+  .action-btn.danger-ghost:hover { background: var(--danger-bg); }
+
+  .action-btn.success-ghost {
+    background: transparent;
+    color: var(--success);
+    border: 1px solid var(--success-bg);
+  }
+  .action-btn.success-ghost:hover { background: var(--success-bg); }
+
+  /* Risk chip */
+  .risk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+
+  .risk-chip.danger  { background: var(--danger-bg);  color: var(--danger);  }
+  .risk-chip.warning { background: var(--warning-bg); color: var(--warning); }
+  .risk-chip.success { background: var(--success-bg); color: var(--success); }
+
+  .risk-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .danger  .risk-dot { background: var(--danger);  }
+  .warning .risk-dot { background: var(--warning); }
+  .success .risk-dot { background: var(--success); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary);
+  }
+
+  .empty-state .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+  }
+
+  .empty-state h3 {
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-family: var(--font-heading);
+  }
+
+  .empty-state p {
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+    animation: fadeInOverlay 0.2s ease;
+  }
+
+  @keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .modal-box {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    width: min(540px, 95vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUpModal 0.25s ease;
+  }
+
+  @keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .modal-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 1.4rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem;
+    transition: var(--transition);
+    box-shadow: none;
+  }
+
+  .modal-close:hover { color: var(--text-primary); transform: scale(1.15); background: none; box-shadow: none; }
+
+  .modal-body {
+    padding: 1.5rem 2rem;
+  }
+
+  .modal-footer {
+    padding: 1rem 2rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .modal-field {
+    margin-bottom: 1.2rem;
+  }
+
+  .modal-field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.4rem;
+  }
+
+  .modal-field select,
+  .modal-field input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+  }
+
+  .modal-field select:focus,
+  .modal-field input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(47,111,109,0.15);
+  }
+
+  .modal-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  #agendar-status {
+    min-height: 1.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  .status-ok   { color: var(--success); }
+  .status-err  { color: var(--danger); }
+  .status-info { color: var(--info); }
+
+  /* Ficticious badge */
+  .ficticio-chip {
+    font-size: 0.68rem;
+    padding: 0.15rem 0.45rem;
+    background: var(--info-bg);
+    color: var(--info);
+    border-radius: 4px;
+    font-weight: 700;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+  }
+</style>
+
+{# ── Header ── #}
+<div class="agenda-toolbar">
+  <div class="page-header" style="margin-bottom:0">
     <h1 class="page-title">Agenda do Dia</h1>
-    <p class="page-subtitle">{{ data }} · Acompanhe o risco e confirme presenças antes de agir</p>
+    <p class="page-subtitle">{{ data }} · Risco calculado por IA para cada consulta</p>
+  </div>
+  <div class="toolbar-actions">
+    <button class="btn-secondary" id="btn-gerar-ficticia" onclick="gerarAgendaFicticia()">
+      ✦ Gerar Agenda Demo
+    </button>
+    <button class="btn-primary" onclick="abrirModalAgendar()">
+      + Agendar Consulta
+    </button>
+  </div>
 </div>
 
-<!-- Stats Cards -->
+{# ── Stats ── #}
 <div class="stats-grid">
-    <div class="stat-card info">
-        <div class="stat-label">Total</div>
-        <div class="stat-value">{{ stats.total }}</div>
-        {% if stats.total > 0 %}
-        <div class="stat-label">100%</div>
-        {% endif %}
-    </div>
-    <div class="stat-card danger">
-        <div class="stat-label">Alto Risco</div>
-        <div class="stat-value">{{ stats.alto_risco }}</div>
-        {% if stats.total > 0 %}
-        <div class="stat-label">{{ ((stats.alto_risco / stats.total) * 100) | round(1) }}%</div>
-        {% endif %}
-    </div>
-    <div class="stat-card warning">
-        <div class="stat-label">Médio Risco</div>
-        <div class="stat-value">{{ stats.medio_risco }}</div>
-        {% if stats.total > 0 %}
-        <div class="stat-label">{{ ((stats.medio_risco / stats.total) * 100) | round(1) }}%</div>
-        {% endif %}
-    </div>
-    <div class="stat-card success">
-        <div class="stat-label">Baixo Risco</div>
-        <div class="stat-value">{{ stats.baixo_risco }}</div>
-        {% if stats.total > 0 %}
-        <div class="stat-label">{{ ((stats.baixo_risco / stats.total) * 100) | round(1) }}%</div>
-        {% endif %}
-    </div>
+  <div class="stat-card info">
+    <div class="stat-label">Total</div>
+    <div class="stat-value">{{ stats.total }}</div>
+    {% if stats.total > 0 %}<div class="stat-label">consultas hoje</div>{% endif %}
+  </div>
+  <div class="stat-card danger">
+    <div class="stat-label">Alto Risco</div>
+    <div class="stat-value">{{ stats.alto_risco }}</div>
+    {% if stats.total > 0 %}<div class="stat-label">{{ ((stats.alto_risco / stats.total) * 100) | round(1) }}%</div>{% endif %}
+  </div>
+  <div class="stat-card warning">
+    <div class="stat-label">Médio Risco</div>
+    <div class="stat-value">{{ stats.medio_risco }}</div>
+    {% if stats.total > 0 %}<div class="stat-label">{{ ((stats.medio_risco / stats.total) * 100) | round(1) }}%</div>{% endif %}
+  </div>
+  <div class="stat-card success">
+    <div class="stat-label">Baixo Risco</div>
+    <div class="stat-value">{{ stats.baixo_risco }}</div>
+    {% if stats.total > 0 %}<div class="stat-label">{{ ((stats.baixo_risco / stats.total) * 100) | round(1) }}%</div>{% endif %}
+  </div>
 </div>
 
-<!-- Alert se houver alto risco -->
+{# ── Alert ── #}
 {% if stats.alto_risco > 0 %}
 <div class="alert alert-danger">
-    <strong>Atenção:</strong> {{ stats.alto_risco }} consulta(s) com alto risco de falta. Recomenda-se confirmação.
+  <strong>Atenção:</strong> {{ stats.alto_risco }} consulta(s) com alto risco de falta. Confirme presença antes do atendimento.
 </div>
 {% endif %}
 
+{# ── Table ── #}
 {% if consultas %}
-<!-- Tabela de Consultas -->
 <div class="table-container">
-    <table>
-        <thead>
-            <tr>
-                <th>Horário</th>
-                <th>Paciente</th>
-                <th>Procedimento</th>
-                <th>Tipo</th>
-                <th>Faltas</th>
-                <th>Antecedência</th>
-                <th>Probabilidade</th>
-                <th>Risco</th>
-                <th>Ação</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for consulta in consultas %}
-            <tr id="consulta-row-{{ consulta.id }}">
-                <td><strong>{{ consulta.horario }}</strong></td>
-                <td>{{ consulta.nome }}</td>
-                <td>{{ consulta.procedimento }}</td>
-                <td>{{ consulta.tipo_pagamento }}</td>
-                <td>{{ consulta.faltas_anteriores }}</td>
-                <td>{{ consulta.antecedencia_dias }} dias</td>
-                <td>
-                    <strong>{{ consulta.risco.probabilidade }}%</strong>
-                    <div class="progress-bar">
-                        <div class="progress-fill {{ consulta.risco.cor }}" 
-                             style="width: {{ consulta.risco.probabilidade }}%">
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <span class="badge badge-{{ consulta.risco.cor }}">
-                        {{ consulta.risco.categoria }}
-                    </span>
-                </td>
-                <td>
-                    <button type="button" class="secondary-button" onclick="mostrarContatoConfirmacao({{ consulta.id }}, 'reagendar')">
-                        Confirmar presença
-                    </button>
-                    <button type="button" onclick="buscarReagendamento({{ consulta.id }})" style="margin-top: 0.5rem;">
-                        Reagendar
-                    </button>
-                </td>
-            </tr>
-            <tr id="consulta-panel-{{ consulta.id }}" class="row-details" style="display:none;">
-                <td colspan="9">
-                    <div id="reagendamento-{{ consulta.id }}" class="details-panel"></div>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <table>
+    <thead>
+      <tr>
+        <th>Horário</th>
+        <th>Paciente</th>
+        <th>Procedimento</th>
+        <th>Tipo</th>
+        <th>Faltas</th>
+        <th>Antecedência</th>
+        <th class="risco-cell">Probabilidade</th>
+        <th>Risco</th>
+        <th class="action-cell">Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in consultas %}
+      <tr id="consulta-row-{{ c.id }}">
+        <td>
+          <strong>{{ c.horario }}</strong>
+          {% if c.status_reorganizacao == 'ficticio' %}
+            <span class="ficticio-chip">DEMO</span>
+          {% endif %}
+        </td>
+        <td>{{ c.nome }}</td>
+        <td>{{ c.procedimento }}</td>
+        <td>{{ c.tipo_pagamento }}</td>
+        <td>{{ c.faltas_anteriores }}</td>
+        <td>{{ c.antecedencia_dias }}d</td>
+        <td class="risco-cell">
+          <strong>{{ c.risco.probabilidade }}%</strong>
+          <div class="progress-bar">
+            <div class="progress-fill {{ c.risco.cor }}"
+                 style="width: {{ c.risco.probabilidade }}%"></div>
+          </div>
+        </td>
+        <td>
+          <span class="risk-chip {{ c.risco.cor }}">
+            <span class="risk-dot"></span>{{ c.risco.categoria }}
+          </span>
+        </td>
+        <td class="action-cell">
+          <div class="action-group">
+            <a href="/prontuario/{{ c.paciente_id }}"
+               class="action-btn ghost">Abrir PEP</a>
+            <button class="action-btn success-ghost"
+                    onclick="registrarDesfecho({{ c.id }}, 'Realizado')">
+              ✓ Realizado
+            </button>
+            <button class="action-btn danger-ghost"
+                    onclick="registrarDesfecho({{ c.id }}, 'Falta')">
+              ✗ Falta
+            </button>
+            <button class="action-btn ghost"
+                    onclick="buscarReagendamento({{ c.id }})">
+              ↻ Reagendar
+            </button>
+          </div>
+        </td>
+      </tr>
+      <tr id="consulta-panel-{{ c.id }}" class="row-details" style="display:none;">
+        <td colspan="9">
+          <div id="reagendamento-{{ c.id }}" class="details-panel"></div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
-<div class="alert alert-info">
-    Nenhuma consulta encontrada para hoje.
+<div class="table-container">
+  <div class="empty-state">
+    <div class="empty-icon">◎</div>
+    <h3>Nenhuma consulta hoje</h3>
+    <p>Crie uma agenda de demonstração ou agende uma consulta manualmente.</p>
+    <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
+      <button class="btn-secondary" onclick="gerarAgendaFicticia()">✦ Gerar Agenda Demo</button>
+      <button class="btn-primary" onclick="abrirModalAgendar()">+ Agendar Consulta</button>
+    </div>
+  </div>
 </div>
 {% endif %}
+
+{# ── Modal de Agendamento ── #}
+<div class="modal-overlay" id="modal-agendar">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <h2 id="modal-title">Nova Consulta</h2>
+      <button class="modal-close" onclick="fecharModalAgendar()" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label for="ag-paciente">Paciente *</label>
+        <select id="ag-paciente" required>
+          <option value="">Carregando pacientes…</option>
+        </select>
+      </div>
+      <div class="modal-grid-2">
+        <div class="modal-field">
+          <label for="ag-data">Data *</label>
+          <input type="date" id="ag-data" required>
+        </div>
+        <div class="modal-field">
+          <label for="ag-horario">Horário *</label>
+          <select id="ag-horario">
+            <option>08:00</option><option>08:30</option>
+            <option>09:00</option><option>09:30</option>
+            <option>10:00</option><option>10:30</option>
+            <option>11:00</option><option>11:30</option>
+            <option selected>14:00</option><option>14:30</option>
+            <option>15:00</option><option>15:30</option>
+            <option>16:00</option><option>16:30</option>
+            <option>17:00</option><option>17:30</option>
+            <option>18:00</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="modal-field">
+          <label for="ag-procedimento">Procedimento</label>
+          <select id="ag-procedimento">
+            <option>Consulta</option>
+            <option>Limpeza</option>
+            <option>Obturação</option>
+            <option>Extração</option>
+            <option>Canal</option>
+            <option>Clareamento</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label for="ag-retorno">É retorno?</label>
+          <select id="ag-retorno">
+            <option value="0">Não</option>
+            <option value="1">Sim</option>
+          </select>
+        </div>
+      </div>
+      <div id="agendar-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModalAgendar()">Cancelar</button>
+      <button class="btn-primary" id="btn-confirmar-agendamento" onclick="confirmarAgendamento()">
+        Confirmar Agendamento
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Modal Agendar ── */
+function abrirModalAgendar() {
+  document.getElementById('modal-agendar').classList.add('open');
+  // Data padrão = hoje
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('ag-data').value = today;
+  carregarPacientesModal();
+}
+
+function fecharModalAgendar() {
+  document.getElementById('modal-agendar').classList.remove('open');
+  document.getElementById('agendar-status').textContent = '';
+  document.getElementById('agendar-status').className = '';
+}
+
+// Fechar ao clicar fora
+document.getElementById('modal-agendar').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalAgendar();
+});
+
+let pacientesCarregados = false;
+async function carregarPacientesModal() {
+  if (pacientesCarregados) return;
+  try {
+    const res = await fetch('/pacientes-lista');
+    const data = await res.json();
+    const sel = document.getElementById('ag-paciente');
+    sel.innerHTML = '<option value="">Selecione um paciente…</option>';
+    (data.pacientes || []).forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = `${p.nome} (${p.tipo_pagamento})`;
+      sel.appendChild(opt);
+    });
+    pacientesCarregados = true;
+  } catch(e) {
+    document.getElementById('ag-paciente').innerHTML =
+      '<option value="">Erro ao carregar pacientes</option>';
+  }
+}
+
+async function confirmarAgendamento() {
+  const pacienteId = document.getElementById('ag-paciente').value;
+  const data       = document.getElementById('ag-data').value;
+  const horario    = document.getElementById('ag-horario').value;
+  const proc       = document.getElementById('ag-procedimento').value;
+  const retorno    = document.getElementById('ag-retorno').value;
+  const statusEl   = document.getElementById('agendar-status');
+  const btn        = document.getElementById('btn-confirmar-agendamento');
+
+  if (!pacienteId || !data || !horario) {
+    statusEl.textContent = 'Preencha todos os campos obrigatórios.';
+    statusEl.className = 'status-err';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Salvando…';
+  statusEl.className = 'status-info';
+
+  try {
+    const fd = new FormData();
+    fd.append('paciente_id', pacienteId);
+    fd.append('data', data);
+    fd.append('horario', horario);
+    fd.append('procedimento', proc);
+    fd.append('e_retorno', retorno);
+
+    const res  = await fetch('/agendar', { method: 'POST', body: fd });
+    const json = await res.json();
+
+    if (json.sucesso) {
+      statusEl.textContent = json.mensagem;
+      statusEl.className = 'status-ok';
+      setTimeout(() => { fecharModalAgendar(); location.reload(); }, 1200);
+    } else {
+      statusEl.textContent = json.mensagem;
+      statusEl.className = 'status-err';
+    }
+  } catch(e) {
+    statusEl.textContent = 'Erro de conexão.';
+    statusEl.className = 'status-err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── Gerar Agenda Demo ── */
+async function gerarAgendaFicticia() {
+  const btn = document.getElementById('btn-gerar-ficticia');
+  if (!btn) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Gerando…';
+
+  try {
+    const res  = await fetch('/gerar-agenda-ficticia', { method: 'POST' });
+    const json = await res.json();
+    if (json.sucesso) {
+      location.reload();
+    } else {
+      alert('Erro: ' + json.mensagem);
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+/* ── Registrar desfecho ── */
+function registrarDesfecho(consultaId, desfecho) {
+  const label = desfecho === 'Realizado' ? 'Realizado' : 'Falta';
+  if (!confirm(`Confirmar como "${label}" para esta consulta?`)) return;
+
+  const fd = new FormData();
+  fd.append('consulta_id', consultaId);
+  fd.append('desfecho', desfecho);
+
+  fetch('/registrar-desfecho', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (data.sucesso) {
+        const row = document.getElementById(`consulta-row-${consultaId}`);
+        if (row) {
+          row.style.opacity = '0.4';
+          row.style.transition = 'opacity 0.4s ease';
+          setTimeout(() => row.remove(), 500);
+        }
+      } else {
+        alert('Erro: ' + data.mensagem);
+      }
+    })
+    .catch(e => alert('Erro: ' + e.message));
+}
+</script>
 {% endblock %}

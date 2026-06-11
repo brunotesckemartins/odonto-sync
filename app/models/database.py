@@ -15,17 +15,38 @@ def _ensure_schema(conn):
         return
 
     cursor = conn.cursor()
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='pacientes'")
+    tabela_pacientes_existe = bool(cursor.fetchone())
+    if tabela_pacientes_existe:
+        cursor.execute('PRAGMA table_info(pacientes)')
+        colunas_pacientes = {row[1] for row in cursor.fetchall()}
+
+        if 'fumante' not in colunas_pacientes:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN fumante INTEGER DEFAULT 0")
+        if 'doenca_cronica' not in colunas_pacientes:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN doenca_cronica INTEGER DEFAULT 0")
+        if 'complexidade_tratamento' not in colunas_pacientes:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN complexidade_tratamento TEXT DEFAULT 'Baixa'")
+
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='consultas'")
-    if not cursor.fetchone():
-        return
+    tabela_consultas_existe = bool(cursor.fetchone())
+    if tabela_consultas_existe:
+        cursor.execute('PRAGMA table_info(consultas)')
+        colunas_consultas = {row[1] for row in cursor.fetchall()}
 
-    cursor.execute('PRAGMA table_info(consultas)')
-    colunas = {row[1] for row in cursor.fetchall()}
-
-    if 'status_reorganizacao' not in colunas:
-        cursor.execute("ALTER TABLE consultas ADD COLUMN status_reorganizacao TEXT DEFAULT 'pendente'")
-    if 'confirmacao_presenca' not in colunas:
-        cursor.execute("ALTER TABLE consultas ADD COLUMN confirmacao_presenca INTEGER DEFAULT 0")
+        if 'status_reorganizacao' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN status_reorganizacao TEXT DEFAULT 'pendente'")
+        if 'confirmacao_presenca' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN confirmacao_presenca INTEGER DEFAULT 0")
+        if 'compareceu' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN compareceu INTEGER")
+        if 'status_atendimento' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN status_atendimento TEXT")
+        if 'condicao_clima' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN condicao_clima TEXT DEFAULT 'ensolarado'")
+        if 'temperatura' not in colunas_consultas:
+            cursor.execute("ALTER TABLE consultas ADD COLUMN temperatura INTEGER DEFAULT 25")
 
     conn.commit()
     _schema_checked = True
@@ -59,6 +80,9 @@ def init_db():
             faltas_anteriores INTEGER DEFAULT 0,
             taxa_historica REAL DEFAULT 0.0,
             tempo_como_paciente INTEGER DEFAULT 0,
+            fumante INTEGER DEFAULT 0,
+            doenca_cronica INTEGER DEFAULT 0,
+            complexidade_tratamento TEXT DEFAULT 'Baixa' CHECK (complexidade_tratamento IN ('Baixa', 'Média', 'Alta')),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -78,7 +102,10 @@ def init_db():
             e_retorno INTEGER DEFAULT 0,
             n_remarcacoes INTEGER DEFAULT 0,
             proximo_feriado INTEGER DEFAULT 0,
+            condicao_clima TEXT DEFAULT 'ensolarado',
+            temperatura INTEGER DEFAULT 25,
             compareceu INTEGER,
+            status_atendimento TEXT,
             risco_calculado REAL,
             status_reorganizacao TEXT DEFAULT 'pendente',
             confirmacao_presenca INTEGER DEFAULT 0,
@@ -131,6 +158,7 @@ def listar_pacientes_para_simulacao(limit=500):
     cursor.execute('''
         SELECT p.id, p.nome, p.faixa_etaria, p.tipo_pagamento,
                p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento,
                MAX(c.data) AS ultima_data
         FROM pacientes p
         LEFT JOIN consultas c ON c.paciente_id = p.id
@@ -186,7 +214,8 @@ def get_consultas_do_dia(data):
     
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
-               p.taxa_historica, p.tempo_como_paciente
+               p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
@@ -205,7 +234,8 @@ def get_consultas_alto_risco(data, threshold=0.6):
     
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
-               p.taxa_historica, p.tempo_como_paciente
+               p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ? AND c.risco_calculado >= ?
@@ -224,7 +254,8 @@ def get_consultas_periodo(data_inicio, data_fim):
 
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
-               p.taxa_historica, p.tempo_como_paciente
+               p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data BETWEEN ? AND ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
@@ -243,7 +274,8 @@ def get_consulta_por_id(consulta_id):
 
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
-               p.taxa_historica, p.tempo_como_paciente
+               p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.id = ?

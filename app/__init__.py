@@ -24,11 +24,12 @@ def create_app():
                              error_message='Erro interno do servidor',
                              error_description='Ocorreu um erro inesperado. Por favor, tente novamente.'), 500
     
-    from app.routes import agenda, simulacao, reorganizacao, graficos
+    from app.routes import agenda, simulacao, reorganizacao, graficos, prontuario
     
     app.register_blueprint(agenda.bp)
     app.register_blueprint(simulacao.bp)
     app.register_blueprint(reorganizacao.bp)
     app.register_blueprint(graficos.bp)
+    app.register_blueprint(prontuario.bp)
     
     return app

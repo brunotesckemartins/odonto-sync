@@ -39,6 +39,9 @@ def prever_risco(dados_consulta):
             - faltas_anteriores: int
             - taxa_historica: float (0.0 a 1.0)
             - tempo_como_paciente: int (meses)
+            - fumante: int (0 ou 1)
+            - doenca_cronica: int (0 ou 1)
+            - complexidade_tratamento: str ('Baixa', 'Média', 'Alta')
             - dia_semana: str ('Monday', 'Tuesday', etc)
             - turno: str ('Manhã', 'Tarde', 'Noite')
             - procedimento: str ('Consulta', 'Limpeza', 'Obturação', etc)
@@ -58,10 +61,9 @@ def prever_risco(dados_consulta):
     
     # Preparar features na ordem correta
     features_ordem = [
-        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 
-        'taxa_historica', 'tempo_como_paciente', 'dia_semana',
-        'turno', 'procedimento', 'antecedencia_dias', 'e_retorno',
-        'n_remarcacoes', 'proximo_feriado', 'condicao_clima', 'temperatura'
+        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 'taxa_historica', 'tempo_como_paciente',
+        'fumante', 'doenca_cronica', 'complexidade_tratamento', 'dia_semana', 'turno', 'procedimento',
+        'antecedencia_dias', 'e_retorno', 'n_remarcacoes', 'proximo_feriado', 'condicao_clima', 'temperatura'
     ]
     
     # Codificar variáveis categóricas
@@ -183,6 +185,9 @@ if __name__ == '__main__':
         'faltas_anteriores': 3,
         'taxa_historica': 0.6,
         'tempo_como_paciente': 2,
+        'fumante': 1,
+        'doenca_cronica': 0,
+        'complexidade_tratamento': 'Alta',
         'dia_semana': 'Monday',
         'turno': 'Noite',
         'procedimento': 'Consulta',
@@ -207,6 +212,9 @@ if __name__ == '__main__':
         'faltas_anteriores': 0,
         'taxa_historica': 0.05,
         'tempo_como_paciente': 36,
+        'fumante': 0,
+        'doenca_cronica': 1,
+        'complexidade_tratamento': 'Baixa',
         'dia_semana': 'Wednesday',
         'turno': 'Manhã',
         'procedimento': 'Canal',
@@ -231,6 +239,9 @@ if __name__ == '__main__':
         'faltas_anteriores': 1,
         'taxa_historica': 0.2,
         'tempo_como_paciente': 12,
+        'fumante': 0,
+        'doenca_cronica': 0,
+        'complexidade_tratamento': 'Média',
         'dia_semana': 'Friday',
         'turno': 'Tarde',
         'procedimento': 'Limpeza',

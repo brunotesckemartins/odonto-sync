@@ -15,16 +15,38 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from config import Config
 
-def carregar_dados():
-    """Carrega o dataset do CSV"""
-    print("[LOAD] Carregando dados...")
+import sqlite3
+
+def carregar_dados_do_pep():
+    """Carrega o dataset diretamente do banco de dados (PEP)"""
+    print("[LOAD] Extraindo histórico do Prontuário Eletrônico...")
     
-    if not os.path.exists(Config.CSV_PATH):
-        raise FileNotFoundError(f"Dataset não encontrado: {Config.CSV_PATH}")
+    # Caminho do banco (ajuste se a chave DB_PATH for diferente no seu config.py)
+    db_path = Config.DATABASE_PATH
+
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Banco de dados não encontrado: {db_path}")
     
-    df = pd.read_csv(Config.CSV_PATH)
-    print(f"   [OK] {len(df)} registros carregados")
+    conn = sqlite3.connect(db_path)
     
+    query = """
+SELECT 
+    p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores, p.taxa_historica, p.tempo_como_paciente,
+    p.fumante, p.doenca_cronica, p.complexidade_tratamento,
+    c.dia_semana, c.turno, c.procedimento, c.antecedencia_dias, c.e_retorno, c.n_remarcacoes, 
+    c.proximo_feriado, c.condicao_clima, c.temperatura, c.compareceu
+FROM consultas c
+JOIN pacientes p ON c.paciente_id = p.id
+WHERE c.compareceu IS NOT NULL
+"""
+    
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    
+    if len(df) < 100:
+        print("   [WARNING] Poucos dados históricos encontrados. O modelo pode sofrer overfitting.")
+        
+    print(f"   [OK] {len(df)} consultas históricas carregadas do banco")
     return df
 
 def preprocessar_dados(df):
@@ -33,8 +55,9 @@ def preprocessar_dados(df):
     
     # Colunas para treino (remover identificadores e target)
     colunas_treino = [
-        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 
-        'taxa_historica', 'tempo_como_paciente', 'dia_semana',
+        'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores',
+        'taxa_historica', 'tempo_como_paciente', 'fumante',
+        'doenca_cronica', 'complexidade_tratamento', 'dia_semana',
         'turno', 'procedimento', 'antecedencia_dias', 'e_retorno',
         'n_remarcacoes', 'proximo_feriado', 'condicao_clima', 'temperatura'
     ]
@@ -47,7 +70,7 @@ def preprocessar_dados(df):
     
     # Label Encoding para variáveis categóricas
     encoders = {}
-    colunas_categoricas = ['faixa_etaria', 'tipo_pagamento', 'dia_semana', 'turno', 'procedimento', 'condicao_clima']
+    colunas_categoricas = ['faixa_etaria', 'tipo_pagamento', 'complexidade_tratamento', 'dia_semana', 'turno', 'procedimento', 'condicao_clima']
     
     for coluna in colunas_categoricas:
         le = LabelEncoder()
@@ -174,8 +197,9 @@ def avaliar_modelo(modelo, nome, X_test, y_test, y_pred):
         print("\n[INFO] Top 5 features mais importantes:")
         importances = modelo.feature_importances_
         feature_names = [
-            'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores', 
-            'taxa_historica', 'tempo_como_paciente', 'dia_semana',
+            'faixa_etaria', 'tipo_pagamento', 'faltas_anteriores',
+            'taxa_historica', 'tempo_como_paciente', 'fumante',
+            'doenca_cronica', 'complexidade_tratamento', 'dia_semana',
             'turno', 'procedimento', 'antecedencia_dias', 'e_retorno',
             'n_remarcacoes', 'proximo_feriado', 'condicao_clima', 'temperatura'
         ]
@@ -254,6 +278,9 @@ def salvar_relatorio_performance(nome_modelo, melhor_resultado, todos_resultados
 - faltas_anteriores
 - taxa_historica
 - tempo_como_paciente
+- fumante
+- doenca_cronica
+- complexidade_tratamento
 - dia_semana
 - turno
 - procedimento
@@ -291,12 +318,16 @@ def main():
     """Pipeline completo de treinamento"""
     
     print("="*60)
-    print("OdontoML - Pipeline de Treinamento")
+    print("OdontoML - Pipeline de Treinamento Contínuo")
     print("="*60)
     
-    # 1. Carregar dados
-    df = carregar_dados()
+    # 1. Carregar dados diretamente do PEP
+    df = carregar_dados_do_pep()
+    if len(df) < 30:
+        print("Dados insuficientes")
+        return
     
+    # O restante continua igual...
     # 2. Pré-processar
     X, y, encoders = preprocessar_dados(df)
     
