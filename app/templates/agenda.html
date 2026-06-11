@@ -17,6 +17,7 @@
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
+    align-items: center;
   }
 
   .btn-primary {
@@ -64,14 +65,94 @@
     transform: translateY(-1px);
   }
 
-  /* Table enhancements */
-  .risco-cell {
-    min-width: 120px;
+  /* ── Date picker strip ── */
+  .date-nav {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-sm);
   }
 
-  .action-cell {
-    min-width: 160px;
+  .date-nav label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    margin: 0;
   }
+
+  .date-chips {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  .date-chip {
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .date-chip:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .date-chip.active {
+    background: var(--accent-primary);
+    color: #fff;
+    border-color: var(--accent-primary);
+    box-shadow: 0 2px 8px rgba(47,111,109,0.35);
+  }
+
+  .date-chip.hoje-chip {
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+  }
+
+  .date-chip.hoje-chip.active {
+    background: var(--accent-secondary);
+    color: #fff;
+    border-color: var(--accent-secondary);
+  }
+
+  /* Date picker input */
+  .date-picker-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .date-picker-wrap input[type="date"] {
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    width: auto;
+  }
+
+  /* Table enhancements */
+  .risco-cell { min-width: 120px; }
+  .action-cell { min-width: 160px; }
 
   .action-group {
     display: flex;
@@ -93,10 +174,7 @@
     text-decoration: none;
   }
 
-  .action-btn.primary {
-    background: var(--accent-primary);
-    color: #fff;
-  }
+  .action-btn.primary { background: var(--accent-primary); color: #fff; }
   .action-btn.primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
 
   .action-btn.ghost {
@@ -136,11 +214,7 @@
   .risk-chip.warning { background: var(--warning-bg); color: var(--warning); }
   .risk-chip.success { background: var(--success-bg); color: var(--success); }
 
-  .risk-dot {
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    display: inline-block;
-  }
+  .risk-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
   .danger  .risk-dot { background: var(--danger);  }
   .warning .risk-dot { background: var(--warning); }
   .success .risk-dot { background: var(--success); }
@@ -197,7 +271,7 @@
     border: 1px solid var(--border-color);
     border-radius: 20px;
     box-shadow: var(--shadow-lg);
-    width: min(540px, 95vw);
+    width: min(560px, 95vw);
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUpModal 0.25s ease;
@@ -237,9 +311,7 @@
 
   .modal-close:hover { color: var(--text-primary); transform: scale(1.15); background: none; box-shadow: none; }
 
-  .modal-body {
-    padding: 1.5rem 2rem;
-  }
+  .modal-body { padding: 1.5rem 2rem; }
 
   .modal-footer {
     padding: 1rem 2rem 1.5rem;
@@ -248,9 +320,7 @@
     justify-content: flex-end;
   }
 
-  .modal-field {
-    margin-bottom: 1.2rem;
-  }
+  .modal-field { margin-bottom: 1.2rem; }
 
   .modal-field label {
     display: block;
@@ -285,7 +355,7 @@
     gap: 1rem;
   }
 
-  #agendar-status {
+  #agendar-status, #paciente-status {
     min-height: 1.5rem;
     font-size: 0.85rem;
     font-weight: 500;
@@ -307,21 +377,108 @@
     margin-left: 0.35rem;
     vertical-align: middle;
   }
+
+  /* Patient search in modal */
+  .patient-search-wrap {
+    position: relative;
+  }
+
+  .patient-search-input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+  }
+
+  .patient-search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(47,111,109,0.15);
+  }
+
+  .patient-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+  }
+
+  .patient-dropdown.show { display: block; }
+
+  .patient-opt {
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+  }
+
+  .patient-opt:last-child { border-bottom: none; }
+  .patient-opt:hover { background: var(--bg-secondary); }
+
+  .patient-opt small {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
 </style>
 
 {# ── Header ── #}
 <div class="agenda-toolbar">
   <div class="page-header" style="margin-bottom:0">
     <h1 class="page-title">Agenda do Dia</h1>
-    <p class="page-subtitle">{{ data }} · Risco calculado por IA para cada consulta</p>
+    <p class="page-subtitle">
+      {% if data_selecionada == hoje %}
+        Hoje, {{ data }} · Risco calculado por IA
+      {% else %}
+        {{ data }} · Agenda futura · Risco calculado por IA
+      {% endif %}
+    </p>
   </div>
   <div class="toolbar-actions">
     <button class="btn-secondary" id="btn-gerar-ficticia" onclick="gerarAgendaFicticia()">
       ✦ Gerar Agenda Demo
     </button>
+    <button class="btn-secondary" onclick="abrirModalCriarPaciente()">
+      ＋ Novo Paciente
+    </button>
     <button class="btn-primary" onclick="abrirModalAgendar()">
       + Agendar Consulta
     </button>
+  </div>
+</div>
+
+{# ── Date Navigation Strip ── #}
+<div class="date-nav">
+  <label>📅 Ver agenda de:</label>
+  <div class="date-chips">
+    <a href="/" class="date-chip hoje-chip {% if data_selecionada == hoje %}active{% endif %}">Hoje</a>
+    {% for d in datas_disponiveis %}
+      {% if d != hoje %}
+        <a href="/?data={{ d }}" class="date-chip {% if data_selecionada == d %}active{% endif %}">
+          {{ d[8:10] }}/{{ d[5:7] }}
+          {% if d == data_selecionada %} ✓{% endif %}
+        </a>
+      {% endif %}
+    {% endfor %}
+    {% if not datas_disponiveis %}
+      <span style="color:var(--text-secondary); font-size:0.85rem;">Nenhuma agenda futura cadastrada</span>
+    {% endif %}
+  </div>
+  <div class="date-picker-wrap">
+    <input type="date" id="date-custom-pick" value="{{ data_selecionada }}"
+           onchange="if(this.value) window.location='/?data='+this.value"
+           title="Ir para data específica">
   </div>
 </div>
 
@@ -330,7 +487,7 @@
   <div class="stat-card info">
     <div class="stat-label">Total</div>
     <div class="stat-value">{{ stats.total }}</div>
-    {% if stats.total > 0 %}<div class="stat-label">consultas hoje</div>{% endif %}
+    {% if stats.total > 0 %}<div class="stat-label">consultas</div>{% endif %}
   </div>
   <div class="stat-card danger">
     <div class="stat-label">Alto Risco</div>
@@ -431,8 +588,8 @@
 <div class="table-container">
   <div class="empty-state">
     <div class="empty-icon">◎</div>
-    <h3>Nenhuma consulta hoje</h3>
-    <p>Crie uma agenda de demonstração ou agende uma consulta manualmente.</p>
+    <h3>Nenhuma consulta para este dia</h3>
+    <p>Crie uma agenda de demonstração, agende uma consulta ou selecione outra data acima.</p>
     <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
       <button class="btn-secondary" onclick="gerarAgendaFicticia()">✦ Gerar Agenda Demo</button>
       <button class="btn-primary" onclick="abrirModalAgendar()">+ Agendar Consulta</button>
@@ -450,10 +607,13 @@
     </div>
     <div class="modal-body">
       <div class="modal-field">
-        <label for="ag-paciente">Paciente *</label>
-        <select id="ag-paciente" required>
-          <option value="">Carregando pacientes…</option>
-        </select>
+        <label for="ag-paciente-search">Paciente *</label>
+        <div class="patient-search-wrap">
+          <input type="text" id="ag-paciente-search" class="patient-search-input"
+                 placeholder="Digite o nome do paciente..." autocomplete="off">
+          <input type="hidden" id="ag-paciente">
+          <div class="patient-dropdown" id="ag-paciente-dropdown"></div>
+        </div>
       </div>
       <div class="modal-grid-2">
         <div class="modal-field">
@@ -506,47 +666,154 @@
   </div>
 </div>
 
+{# ── Modal de Criar Paciente ── #}
+<div class="modal-overlay" id="modal-criar-paciente">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2>Novo Paciente</h2>
+      <button class="modal-close" onclick="fecharModalCriarPaciente()" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label for="np-nome">Nome completo *</label>
+        <input type="text" id="np-nome" placeholder="Ex: João da Silva" maxlength="80">
+      </div>
+      <div class="modal-grid-2">
+        <div class="modal-field">
+          <label for="np-faixa">Faixa Etária *</label>
+          <select id="np-faixa">
+            <option value="18-25">18–25 anos</option>
+            <option value="26-35">26–35 anos</option>
+            <option value="36-60" selected>36–60 anos</option>
+            <option value="60+">60+ anos</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label for="np-pagamento">Tipo de Pagamento *</label>
+          <select id="np-pagamento">
+            <option value="Particular">Particular</option>
+            <option value="Convênio">Convênio</option>
+            <option value="Plano Odontológico">Plano Odontológico</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="modal-field">
+          <label for="np-faltas">Faltas anteriores</label>
+          <input type="number" id="np-faltas" value="0" min="0" max="20">
+        </div>
+        <div class="modal-field">
+          <label for="np-complexidade">Complexidade</label>
+          <select id="np-complexidade">
+            <option value="Baixa">Baixa</option>
+            <option value="Média">Média</option>
+            <option value="Alta">Alta</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-grid-2">
+        <div class="modal-field">
+          <label for="np-fumante">Fumante</label>
+          <select id="np-fumante">
+            <option value="0">Não</option>
+            <option value="1">Sim</option>
+          </select>
+        </div>
+        <div class="modal-field">
+          <label for="np-doenca">Doença Crônica</label>
+          <select id="np-doenca">
+            <option value="0">Não</option>
+            <option value="1">Sim</option>
+          </select>
+        </div>
+      </div>
+      <div id="paciente-status"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModalCriarPaciente()">Cancelar</button>
+      <button class="btn-primary" id="btn-confirmar-paciente" onclick="confirmarCriarPaciente()">
+        Criar Paciente
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
+/* ── Patient Search ── */
+let todosOsPacientes = [];
+let pacienteCarregado = false;
+
+async function carregarPacientes() {
+  if (pacienteCarregado) return;
+  try {
+    const res = await fetch('/pacientes-lista');
+    const data = await res.json();
+    todosOsPacientes = data.pacientes || [];
+    pacienteCarregado = true;
+  } catch(e) { console.error(e); }
+}
+
+function filtrarPacientes(query) {
+  if (!query.trim()) return [];
+  const q = query.toLowerCase();
+  return todosOsPacientes.filter(p => p.nome.toLowerCase().includes(q)).slice(0, 8);
+}
+
+function setupPacienteSearch() {
+  const input = document.getElementById('ag-paciente-search');
+  const hidden = document.getElementById('ag-paciente');
+  const dropdown = document.getElementById('ag-paciente-dropdown');
+
+  input.addEventListener('focus', () => carregarPacientes());
+  input.addEventListener('input', () => {
+    hidden.value = '';
+    const results = filtrarPacientes(input.value);
+    if (results.length === 0) {
+      dropdown.classList.remove('show');
+      return;
+    }
+    dropdown.innerHTML = results.map(p => `
+      <div class="patient-opt" onclick="selecionarPaciente('${p.id}', ${JSON.stringify(p.nome)}, '${p.tipo_pagamento}')">
+        ${p.nome} <small>(${p.tipo_pagamento})</small>
+      </div>
+    `).join('');
+    dropdown.classList.add('show');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.patient-search-wrap')) {
+      dropdown.classList.remove('show');
+    }
+  });
+}
+
+function selecionarPaciente(id, nome, tipo) {
+  document.getElementById('ag-paciente').value = id;
+  document.getElementById('ag-paciente-search').value = nome;
+  document.getElementById('ag-paciente-dropdown').classList.remove('show');
+}
+
 /* ── Modal Agendar ── */
 function abrirModalAgendar() {
   document.getElementById('modal-agendar').classList.add('open');
-  // Data padrão = hoje
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('ag-data').value = today;
-  carregarPacientesModal();
+  document.getElementById('ag-data').value = '{{ data_selecionada }}' || today;
+  carregarPacientes();
+  setupPacienteSearch();
 }
 
 function fecharModalAgendar() {
   document.getElementById('modal-agendar').classList.remove('open');
   document.getElementById('agendar-status').textContent = '';
   document.getElementById('agendar-status').className = '';
+  document.getElementById('ag-paciente-search').value = '';
+  document.getElementById('ag-paciente').value = '';
+  document.getElementById('ag-paciente-dropdown').classList.remove('show');
 }
 
-// Fechar ao clicar fora
 document.getElementById('modal-agendar').addEventListener('click', function(e) {
   if (e.target === this) fecharModalAgendar();
 });
-
-let pacientesCarregados = false;
-async function carregarPacientesModal() {
-  if (pacientesCarregados) return;
-  try {
-    const res = await fetch('/pacientes-lista');
-    const data = await res.json();
-    const sel = document.getElementById('ag-paciente');
-    sel.innerHTML = '<option value="">Selecione um paciente…</option>';
-    (data.pacientes || []).forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = `${p.nome} (${p.tipo_pagamento})`;
-      sel.appendChild(opt);
-    });
-    pacientesCarregados = true;
-  } catch(e) {
-    document.getElementById('ag-paciente').innerHTML =
-      '<option value="">Erro ao carregar pacientes</option>';
-  }
-}
 
 async function confirmarAgendamento() {
   const pacienteId = document.getElementById('ag-paciente').value;
@@ -558,7 +825,7 @@ async function confirmarAgendamento() {
   const btn        = document.getElementById('btn-confirmar-agendamento');
 
   if (!pacienteId || !data || !horario) {
-    statusEl.textContent = 'Preencha todos os campos obrigatórios.';
+    statusEl.textContent = 'Selecione um paciente e preencha data/horário.';
     statusEl.className = 'status-err';
     return;
   }
@@ -581,7 +848,75 @@ async function confirmarAgendamento() {
     if (json.sucesso) {
       statusEl.textContent = json.mensagem;
       statusEl.className = 'status-ok';
-      setTimeout(() => { fecharModalAgendar(); location.reload(); }, 1200);
+      setTimeout(() => { fecharModalAgendar(); window.location = '/?data=' + data; }, 1200);
+    } else {
+      statusEl.textContent = json.mensagem;
+      statusEl.className = 'status-err';
+    }
+  } catch(e) {
+    statusEl.textContent = 'Erro de conexão.';
+    statusEl.className = 'status-err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── Modal Criar Paciente ── */
+function abrirModalCriarPaciente() {
+  document.getElementById('modal-criar-paciente').classList.add('open');
+  document.getElementById('paciente-status').textContent = '';
+}
+
+function fecharModalCriarPaciente() {
+  document.getElementById('modal-criar-paciente').classList.remove('open');
+  document.getElementById('np-nome').value = '';
+  document.getElementById('np-faltas').value = '0';
+  document.getElementById('paciente-status').textContent = '';
+}
+
+document.getElementById('modal-criar-paciente').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalCriarPaciente();
+});
+
+async function confirmarCriarPaciente() {
+  const nome       = document.getElementById('np-nome').value.trim();
+  const faixa      = document.getElementById('np-faixa').value;
+  const pagamento  = document.getElementById('np-pagamento').value;
+  const faltas     = document.getElementById('np-faltas').value;
+  const complexidade = document.getElementById('np-complexidade').value;
+  const fumante    = document.getElementById('np-fumante').value;
+  const doenca     = document.getElementById('np-doenca').value;
+  const statusEl   = document.getElementById('paciente-status');
+  const btn        = document.getElementById('btn-confirmar-paciente');
+
+  if (!nome) {
+    statusEl.textContent = 'Nome é obrigatório.';
+    statusEl.className = 'status-err';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = 'Criando paciente…';
+  statusEl.className = 'status-info';
+
+  try {
+    const fd = new FormData();
+    fd.append('nome', nome);
+    fd.append('faixa_etaria', faixa);
+    fd.append('tipo_pagamento', pagamento);
+    fd.append('faltas_anteriores', faltas);
+    fd.append('complexidade_tratamento', complexidade);
+    fd.append('fumante', fumante);
+    fd.append('doenca_cronica', doenca);
+
+    const res  = await fetch('/criar-paciente', { method: 'POST', body: fd });
+    const json = await res.json();
+
+    if (json.sucesso) {
+      statusEl.textContent = json.mensagem;
+      statusEl.className = 'status-ok';
+      pacienteCarregado = false; // força reload da lista
+      setTimeout(() => fecharModalCriarPaciente(), 1500);
     } else {
       statusEl.textContent = json.mensagem;
       statusEl.className = 'status-err';
@@ -606,7 +941,7 @@ async function gerarAgendaFicticia() {
     const res  = await fetch('/gerar-agenda-ficticia', { method: 'POST' });
     const json = await res.json();
     if (json.sucesso) {
-      location.reload();
+      location.href = '/';
     } else {
       alert('Erro: ' + json.mensagem);
     }
@@ -637,6 +972,8 @@ function registrarDesfecho(consultaId, desfecho) {
           row.style.transition = 'opacity 0.4s ease';
           setTimeout(() => row.remove(), 500);
         }
+        const panel = document.getElementById(`consulta-panel-${consultaId}`);
+        if (panel) setTimeout(() => panel.remove(), 500);
       } else {
         alert('Erro: ' + data.mensagem);
       }

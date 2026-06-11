@@ -191,8 +191,7 @@ def contato_consulta(consulta_id):
                 'id': consulta['paciente_id'],
                 'nome': consulta['nome']
             },
-            'telefone_mascarado': telefone_mascarado,
-            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
+            'telefone_mascarado': telefone_mascarado
         })
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao buscar contato: {str(e)}'}), 500
@@ -240,8 +239,7 @@ def sugerir_reagendamento_route(consulta_id):
             'sucesso': True,
             'opcoes': opcoes,
             'paciente': paciente,
-            'telefone_mascarado': telefone_mascarado,
-            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
+            'telefone_mascarado': telefone_mascarado
         })
     except ValueError as e:
         return jsonify({'sucesso': False, 'mensagem': str(e)}), 400

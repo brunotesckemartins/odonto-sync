@@ -1,0 +1,254 @@
+{% extends "base.html" %}
+{% block title %}Selecionar Paciente — OdontoSync{% endblock %}
+
+{% block content %}
+<style>
+  .pep-lista-header {
+    margin-bottom: 2rem;
+  }
+
+  .search-hero {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-sm);
+    animation: rise-in 0.35s ease both;
+  }
+
+  .search-hero h2 {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+  }
+
+  .search-bar {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .search-input {
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    font-size: 1rem;
+    color: var(--text-primary);
+    transition: var(--transition);
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(47,111,109,0.15);
+  }
+
+  .search-input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .pacientes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .paciente-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.4rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    animation: rise-in 0.4s ease both;
+  }
+
+  .paciente-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent-primary);
+  }
+
+  .pac-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    box-shadow: 0 3px 8px rgba(47,111,109,0.25);
+    overflow: hidden;
+  }
+
+  .pac-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .pac-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pac-nome {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.2rem;
+  }
+
+  .pac-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .pac-tag {
+    display: inline-block;
+    padding: 0.1rem 0.45rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+  }
+
+  .pac-tag.danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+
+  .pac-arrow {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: var(--transition);
+  }
+
+  .paciente-card:hover .pac-arrow {
+    color: var(--accent-primary);
+    transform: translateX(3px);
+  }
+
+  .count-label {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+  }
+
+  #no-results {
+    display: none;
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+  }
+
+  #no-results .nr-icon {
+    font-size: 2.5rem;
+    opacity: 0.35;
+    margin-bottom: 0.75rem;
+  }
+</style>
+
+<div class="pep-lista-header page-header">
+  <h1 class="page-title">Prontuário Eletrônico</h1>
+  <p class="page-subtitle">Selecione um paciente para abrir o PEP</p>
+</div>
+
+<div class="search-hero">
+  <h2>🔍 Buscar Paciente</h2>
+  <div class="search-bar">
+    <input type="text" id="search-paciente" class="search-input"
+           placeholder="Digite o nome do paciente…" autocomplete="off">
+  </div>
+</div>
+
+<div class="count-label" id="count-label">
+  {{ pacientes|length }} paciente(s) cadastrado(s)
+</div>
+
+<div class="pacientes-grid" id="pacientes-grid">
+  {% for p in pacientes %}
+  {% set initials = (p.nome or 'P')[0] | upper %}
+  <a href="/prontuario/{{ p.id }}" class="paciente-card" data-nome="{{ p.nome | lower }}">
+    <div class="pac-avatar">
+      {% if p.photo_url %}
+        <img src="{{ p.photo_url }}" alt="{{ p.nome }}">
+      {% else %}
+        {{ initials }}
+      {% endif %}
+    </div>
+    <div class="pac-info">
+      <div class="pac-nome">{{ p.nome }}</div>
+      <div class="pac-meta">
+        <span class="pac-tag">{{ p.tipo_pagamento }}</span>
+        <span class="pac-tag">{{ p.faixa_etaria }} anos</span>
+        {% if p.faltas_anteriores >= 3 %}
+          <span class="pac-tag danger">{{ p.faltas_anteriores }} faltas</span>
+        {% endif %}
+      </div>
+    </div>
+    <span class="pac-arrow">›</span>
+  </a>
+  {% endfor %}
+</div>
+
+<div id="no-results">
+  <div class="nr-icon">◎</div>
+  <p>Nenhum paciente encontrado para "<strong id="no-results-query"></strong>"</p>
+</div>
+
+<script>
+const searchInput = document.getElementById('search-paciente');
+const cards = document.querySelectorAll('.paciente-card');
+const countLabel = document.getElementById('count-label');
+const noResults = document.getElementById('no-results');
+const noResultsQuery = document.getElementById('no-results-query');
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  let visible = 0;
+
+  cards.forEach(card => {
+    const nome = card.dataset.nome || '';
+    const match = !q || nome.includes(q);
+    card.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+
+  countLabel.textContent = q
+    ? `${visible} resultado(s) para "${searchInput.value}"`
+    : `${cards.length} paciente(s) cadastrado(s)`;
+
+  noResults.style.display = visible === 0 ? 'block' : 'none';
+  noResultsQuery.textContent = searchInput.value;
+});
+
+// Auto-focus
+searchInput.focus();
+</script>
+{% endblock %}

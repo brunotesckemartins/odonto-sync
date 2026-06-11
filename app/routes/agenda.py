@@ -7,7 +7,10 @@ import random
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from app.models.database import get_consultas_do_dia, get_data_referencia_consultas, get_consulta_por_id, get_connection
+from app.models.database import (
+    get_consultas_do_dia, get_data_referencia_consultas,
+    get_consulta_por_id, get_connection, get_datas_com_consultas
+)
 import hashlib
 from app.ml.inferencia import prever_e_classificar
 
@@ -72,21 +75,33 @@ def _calcular_risco_consultas(consultas):
 def index():
     """Página principal: agenda do dia com risco calculado por consulta."""
     hoje = datetime.now().strftime('%Y-%m-%d')
-    data_referencia = hoje
+    # Suporte a ?data=YYYY-MM-DD para ver agendas futuras
+    data_param = request.args.get('data', '').strip()
+    if data_param:
+        data_referencia = data_param
+    else:
+        data_referencia = hoje
+
     consultas = get_consultas_do_dia(data_referencia)
 
-    if not consultas:
+    if not consultas and not data_param:
         data_disponivel = get_data_referencia_consultas(hoje)
         if data_disponivel:
             data_referencia = data_disponivel
             consultas = get_consultas_do_dia(data_referencia)
+
+    # Datas com consultas (futuras e hoje)
+    datas_disponiveis = get_datas_com_consultas(hoje)
 
     if not consultas:
         return render_template(
             'agenda.html',
             consultas=[],
             stats={'total': 0, 'alto_risco': 0, 'medio_risco': 0, 'baixo_risco': 0},
-            data=hoje,
+            data=data_referencia,
+            data_selecionada=data_referencia,
+            hoje=hoje,
+            datas_disponiveis=datas_disponiveis,
             active_page='agenda'
         )
 
@@ -97,6 +112,9 @@ def index():
         consultas=consultas_com_risco,
         stats=stats,
         data=data_referencia,
+        data_selecionada=data_referencia,
+        hoje=hoje,
+        datas_disponiveis=datas_disponiveis,
         active_page='agenda'
     )
 
@@ -158,6 +176,47 @@ def agendar_consulta():
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao agendar: {str(e)}'}), 500
 
 
+@bp.route('/criar-paciente', methods=['POST'])
+def criar_paciente():
+    """Cria um novo paciente para testes."""
+    try:
+        nome = request.form.get('nome', '').strip()
+        faixa_etaria = request.form.get('faixa_etaria', '36-60').strip()
+        tipo_pagamento = request.form.get('tipo_pagamento', 'Particular').strip()
+        faltas = int(request.form.get('faltas_anteriores', 0))
+        fumante = int(request.form.get('fumante', 0))
+        doenca_cronica = int(request.form.get('doenca_cronica', 0))
+        complexidade = request.form.get('complexidade_tratamento', 'Baixa').strip()
+
+        if not nome:
+            return jsonify({'sucesso': False, 'mensagem': 'Nome é obrigatório.'}), 400
+
+        # Gerar ID único
+        import uuid
+        paciente_id = str(uuid.uuid4())[:8].upper()
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO pacientes
+                (id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
+                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (paciente_id, nome, faixa_etaria, tipo_pagamento, faltas,
+              round(faltas / max(faltas + 5, 1), 2), random.randint(1, 36),
+              fumante, doenca_cronica, complexidade))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'Paciente "{nome}" criado com sucesso!',
+            'paciente_id': paciente_id
+        })
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao criar paciente: {str(e)}'}), 500
+
+
 @bp.route('/gerar-agenda-ficticia', methods=['POST'])
 def gerar_agenda_ficticia():
     """Gera consultas fictícias para hoje para fins de demonstração."""
@@ -169,7 +228,7 @@ def gerar_agenda_ficticia():
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Remover consultas fictícias anteriores de hoje (marcadas com status 'ficticio')
+        # Remover consultas fictícias anteriores de hoje
         cursor.execute(
             "DELETE FROM consultas WHERE data = ? AND status_reorganizacao = 'ficticio'",
             (hoje,)
@@ -222,7 +281,7 @@ def gerar_agenda_ficticia():
 
         return jsonify({
             'sucesso': True,
-            'mensagem': f'{inseridos} consultas fictícias geradas para hoje ({hoje}).',
+            'mensagem': f'{inseridos} consultas demo geradas para hoje ({hoje}).',
             'redirect': '/'
         })
     except Exception as e:
@@ -262,7 +321,6 @@ def contato_agenda(consulta_id):
             'sucesso': True,
             'paciente': {'id': consulta['paciente_id'], 'nome': consulta['nome']},
             'telefone_mascarado': telefone_mascarado,
-            'nota_lgpd': 'Contato exibido de forma parcial para confirmação prévia.'
         }
     except Exception as e:
         return {'sucesso': False, 'mensagem': f'Erro ao buscar contato: {str(e)}'}, 500

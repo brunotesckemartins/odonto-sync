@@ -1,127 +1,889 @@
 {% extends "base.html" %}
-
-{% block title %}Reorganização - OdontoSync{% endblock %}
+{% block title %}Reorganização — OdontoSync{% endblock %}
 
 {% block content %}
-<div class="page-header">
+<style>
+  /* ── Reorganização styles ── */
+  .reorg-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Cards grid */
+  .reorg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .reorg-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: var(--transition);
+    animation: rise-in 0.4s ease both;
+  }
+
+  .reorg-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .reorg-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(120deg, rgba(47,111,109,0.06), rgba(197,140,75,0.06));
+  }
+
+  .pac-avatar-sm {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 3px 8px rgba(47,111,109,0.25);
+    overflow: hidden;
+  }
+
+  .pac-avatar-sm img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .reorg-card-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .reorg-card-name {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-primary);
+    margin-bottom: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .reorg-card-time {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  .reorg-card-body {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .risco-row {
+    margin: 0.75rem 0 1rem;
+  }
+
+  .risco-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+  }
+
+  .risco-val {
+    color: var(--danger);
+    font-size: 1rem;
+  }
+
+  .recomendacao-box {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 0.75rem;
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 1rem;
+  }
+
+  .reorg-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .action-btn-reorg {
+    padding: 0.6rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .action-btn-reorg.confirm {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success);
+    grid-column: 1 / -1;
+  }
+
+  .action-btn-reorg.confirm:hover {
+    background: var(--success);
+    color: #fff;
+  }
+
+  .action-btn-reorg.confirm.confirmed {
+    background: var(--success);
+    color: #fff;
+    cursor: default;
+  }
+
+  .action-btn-reorg.substitutos {
+    background: var(--info-bg);
+    color: var(--info);
+    border: 1px solid var(--info);
+  }
+
+  .action-btn-reorg.substitutos:hover {
+    background: var(--info);
+    color: #fff;
+  }
+
+  .action-btn-reorg.reagendar {
+    background: var(--warning-bg);
+    color: var(--warning);
+    border: 1px solid var(--warning);
+  }
+
+  .action-btn-reorg.reagendar:hover {
+    background: var(--warning);
+    color: #fff;
+  }
+
+  /* ── Painel de resultados dentro do card ── */
+  .result-panel {
+    display: none;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+  }
+
+  .result-panel.open { display: block; }
+
+  .result-panel-title {
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+  }
+
+  /* ── Modal de substitutos (fullscreen bonito) ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+    z-index: 9000;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .modal-overlay.open {
+    display: flex;
+    animation: fadeInOverlay 0.2s ease;
+  }
+
+  @keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .modal-panel {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    box-shadow: var(--shadow-lg);
+    width: min(680px, 97vw);
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUpModal 0.25s ease;
+    overflow: hidden;
+  }
+
+  @keyframes slideUpModal {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(120deg, rgba(47,111,109,0.07), rgba(197,140,75,0.07));
+    flex-shrink: 0;
+  }
+
+  .modal-panel-header h2 {
+    font-family: var(--font-heading);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .modal-panel-subtitle {
+    font-size: 0.83rem;
+    color: var(--text-secondary);
+    margin-top: 0.2rem;
+  }
+
+  .modal-panel-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem;
+    transition: var(--transition);
+    box-shadow: none;
+    flex-shrink: 0;
+  }
+
+  .modal-panel-close:hover {
+    color: var(--text-primary);
+    transform: scale(1.15);
+    background: none;
+    box-shadow: none;
+  }
+
+  .modal-panel-body {
+    overflow-y: auto;
+    padding: 1.5rem 2rem;
+    flex: 1;
+  }
+
+  /* ── Substituto item ── */
+  .sub-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+  }
+
+  .sub-item:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 2px 10px rgba(47,111,109,0.15);
+  }
+
+  .sub-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sub-rank {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .sub-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    flex: 1;
+  }
+
+  .sub-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.55rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .sub-badge.success { background: var(--success-bg); color: var(--success); }
+  .sub-badge.info    { background: var(--info-bg);    color: var(--info);    }
+  .sub-badge.warning { background: var(--warning-bg); color: var(--warning); }
+
+  .sub-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .sub-stat-item {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+  }
+
+  .sub-stat-item strong {
+    color: var(--text-primary);
+    display: block;
+    font-size: 0.9rem;
+  }
+
+  .sub-justificativa {
+    background: var(--bg-primary);
+    border-left: 3px solid var(--accent-secondary);
+    border-radius: 0 8px 8px 0;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .sub-action-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .sub-btn {
+    flex: 1;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+  }
+
+  .sub-btn.primary {
+    background: var(--accent-primary);
+    color: #fff;
+  }
+
+  .sub-btn.primary:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+  }
+
+  /* ── Opção de reagendamento ── */
+  .reag-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+  }
+
+  .reag-item:hover {
+    border-color: var(--warning);
+    box-shadow: 0 2px 10px rgba(210,154,50,0.15);
+  }
+
+  .reag-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .reag-datetime {
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+  }
+
+  .reag-score {
+    padding: 0.2rem 0.6rem;
+    background: var(--warning-bg);
+    color: var(--warning);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .reag-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .reag-stat {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  .reag-stat strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+  }
+
+  .reag-justificativa {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+    border-left: 3px solid var(--warning);
+    padding-left: 0.75rem;
+  }
+
+  .loading-spinner {
+    text-align: center;
+    padding: 2.5rem;
+    color: var(--text-secondary);
+  }
+
+  .loading-spinner .spin {
+    display: inline-block;
+    font-size: 1.8rem;
+    animation: spin 1s linear infinite;
+    margin-bottom: 0.75rem;
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+</style>
+
+<div class="reorg-header">
+  <div class="page-header" style="margin-bottom:0">
     <h1 class="page-title">Reorganização de Agenda</h1>
     <p class="page-subtitle">Gestão de consultas de alto risco · {{ data }}</p>
+  </div>
 </div>
 
 {% if consultas %}
-{% if mostrando_monitoramento %}
-<div class="alert alert-info">
+  {% if mostrando_monitoramento %}
+  <div class="alert alert-info">
     Nenhuma consulta com risco alto encontrada no período. Exibindo as próximas consultas com maior risco para monitoramento preventivo.
-</div>
-{% else %}
-<div class="alert alert-warning">
-    <strong>{{ consultas|length }} consulta(s)</strong> identificadas com alto risco de falta. Recomenda-se buscar substitutos.
-</div>
-{% endif %}
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    <strong>{{ consultas|length }} consulta(s)</strong> identificadas com alto risco de falta. Recomenda-se tomar ação preventiva.
+  </div>
+  {% endif %}
 
-<div class="cards-grid">
-    {% for consulta in consultas %}
-        <div class="card" id="consulta-card-{{ consulta.id }}">
-            <div class="card-title">
-                {{ consulta.horario }} - {{ consulta.nome }}
-            </div>
-            <div class="card-content">
-            <p><strong>Procedimento:</strong> {{ consulta.procedimento }}</p>
-            <p><strong>Tipo:</strong> {{ consulta.tipo_pagamento }}</p>
-            <p><strong>Faltas Anteriores:</strong> {{ consulta.faltas_anteriores }}</p>
-            
-            <div style="margin: 1rem 0;">
-                <strong>Probabilidade de Falta: {{ consulta.risco.probabilidade }}%</strong>
-                <div class="progress-bar">
-                    <div class="progress-fill danger" style="width: {{ consulta.risco.probabilidade }}%"></div>
-                </div>
-            </div>
-            
-            <div style="background-color: var(--bg-secondary); padding: 0.75rem; border-radius: 6px; margin: 1rem 0; font-size: 0.875rem;">
-                {{ consulta.risco.recomendacao }}
-            </div>
-            
-            <button class="secondary-button" onclick="mostrarContatoConfirmacao({{ consulta.id }}, 'reagendar')" style="width: 100%; margin-top: 1rem;">
-                Confirmar presença (LGPD)
-            </button>
-            <button onclick="buscarSubstitutos({{ consulta.id }})" style="width: 100%; margin-top: 0.75rem;">
-                Buscar Substitutos Recomendados
-            </button>
-            <button onclick="buscarReagendamento({{ consulta.id }})" style="width: 100%; margin-top: 0.5rem;">
-                Sugerir Reagendamento Inteligente
-            </button>
-            
-            <div id="substitutos-{{ consulta.id }}" class="details-panel" style="display:none; margin-top: 1rem;">
-                <!-- Substitutos serão carregados aqui via JavaScript -->
-            </div>
-            <div id="reagendamento-{{ consulta.id }}" class="details-panel" style="display:none; margin-top: 1rem;">
-                <!-- Reagendamentos serão carregados aqui via JavaScript -->
-            </div>
+  <div class="reorg-grid">
+    {% for c in consultas %}
+    {% set initials = (c.nome or 'P')[0] | upper %}
+    <div class="reorg-card" id="reorg-card-{{ c.id }}">
+      <div class="reorg-card-header">
+        <div class="pac-avatar-sm" id="avatar-{{ c.id }}">
+          {% if c.photo_url %}
+            <img src="{{ c.photo_url }}" alt="{{ c.nome }}">
+          {% else %}
+            {{ initials }}
+          {% endif %}
         </div>
+        <div class="reorg-card-meta">
+          <div class="reorg-card-name">{{ c.nome }}</div>
+          <div class="reorg-card-time">{{ c.horario }} — {{ c.data if c.data else '' }} · {{ c.procedimento }}</div>
+        </div>
+        <span class="badge badge-{{ c.risco.cor }}" style="flex-shrink:0">{{ c.risco.categoria }}</span>
+      </div>
+
+      <div class="reorg-card-body">
+        <!-- Info rápida -->
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <span class="badge badge-info">{{ c.tipo_pagamento }}</span>
+          <span class="badge badge-warning">{{ c.faltas_anteriores }} falta(s)</span>
+        </div>
+
+        <!-- Barra de risco -->
+        <div class="risco-row">
+          <div class="risco-label">
+            <span>Probabilidade de falta</span>
+            <span class="risco-val">{{ c.risco.probabilidade }}%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill danger" style="width: {{ c.risco.probabilidade }}%"></div>
+          </div>
+        </div>
+
+        <!-- Recomendação -->
+        <div class="recomendacao-box">{{ c.risco.recomendacao }}</div>
+
+        <!-- Ações -->
+        <div class="reorg-actions">
+          <button class="action-btn-reorg confirm" id="btn-confirmar-{{ c.id }}"
+                  onclick="confirmarPresencaCard({{ c.id }}, this)">
+            ✓ Confirmar Presença
+          </button>
+          <button class="action-btn-reorg substitutos"
+                  onclick="abrirModalSubstitutos({{ c.id }}, '{{ c.nome | replace("'","") }}')">
+            👥 Buscar Substitutos
+          </button>
+          <button class="action-btn-reorg reagendar"
+                  onclick="abrirModalReagendamento({{ c.id }}, '{{ c.nome | replace("'","") }}')">
+            📅 Reagendamento Inteligente
+          </button>
+        </div>
+      </div>
     </div>
     {% endfor %}
-</div>
+  </div>
 
 {% else %}
 <div class="alert alert-success">
-    <strong>Excelente!</strong> Não há consultas para reorganização no período analisado.
+  <strong>Excelente!</strong> Não há consultas para reorganização no período analisado.
 </div>
 {% endif %}
 
-<style>
-.substitutos-list {
-    margin-top: 1rem;
+{# ── Modal de Substitutos ── #}
+<div class="modal-overlay" id="modal-substitutos">
+  <div class="modal-panel">
+    <div class="modal-panel-header">
+      <div>
+        <h2>👥 Substitutos Recomendados</h2>
+        <div class="modal-panel-subtitle" id="sub-modal-subtitle">Pacientes disponíveis para ocupar este horário</div>
+      </div>
+      <button class="modal-panel-close" onclick="fecharModalSubstitutos()">&times;</button>
+    </div>
+    <div class="modal-panel-body" id="sub-modal-body">
+      <div class="loading-spinner">
+        <div class="spin">◌</div>
+        <p>Buscando substitutos ideais…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# ── Modal de Reagendamento ── #}
+<div class="modal-overlay" id="modal-reagendamento">
+  <div class="modal-panel">
+    <div class="modal-panel-header">
+      <div>
+        <h2>📅 Reagendamento Inteligente</h2>
+        <div class="modal-panel-subtitle" id="reag-modal-subtitle">Melhores horários para reduzir risco de falta</div>
+      </div>
+      <button class="modal-panel-close" onclick="fecharModalReagendamento()">&times;</button>
+    </div>
+    <div class="modal-panel-body" id="reag-modal-body">
+      <div class="loading-spinner">
+        <div class="spin">◌</div>
+        <p>Calculando melhores horários…</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _subConsultaId = null;
+let _reagConsultaId = null;
+
+/* ── Confirmar Presença (direto no card) ── */
+async function confirmarPresencaCard(consultaId, btn) {
+  if (btn.classList.contains('confirmed')) return;
+  try {
+    const fd = new FormData();
+    fd.append('consulta_id', consultaId);
+    const res = await fetch('/reorganizacao/confirmar-presenca', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.sucesso) {
+      btn.textContent = '✓ Presença Confirmada';
+      btn.classList.add('confirmed');
+      btn.disabled = true;
+      // Visual feedback no card
+      const card = document.getElementById(`reorg-card-${consultaId}`);
+      if (card) {
+        card.style.opacity = '0.55';
+        card.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => {
+          card.style.opacity = '1';
+          card.style.border = '1px solid var(--success)';
+        }, 500);
+      }
+    } else {
+      alert('Erro: ' + data.mensagem);
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+  }
 }
 
-.substitutos-list h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 1rem;
+/* ── Modal Substitutos ── */
+function abrirModalSubstitutos(consultaId, nomePaciente) {
+  _subConsultaId = consultaId;
+  document.getElementById('sub-modal-subtitle').textContent =
+    `Paciente: ${nomePaciente} — buscando substitutos disponíveis`;
+  document.getElementById('sub-modal-body').innerHTML = `
+    <div class="loading-spinner">
+      <div class="spin">◌</div>
+      <p>Buscando substitutos ideais…</p>
+    </div>`;
+  document.getElementById('modal-substitutos').classList.add('open');
+
+  fetch(`/reorganizacao/substitutos/${consultaId}`)
+    .then(r => r.json())
+    .then(data => renderSubstitutos(data))
+    .catch(e => {
+      document.getElementById('sub-modal-body').innerHTML =
+        `<div class="alert alert-danger">Erro ao buscar substitutos: ${e.message}</div>`;
+    });
 }
 
-.substituto-card {
-    background-color: var(--bg-secondary);
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.75rem;
-    border: 1px solid var(--border-color);
+function fecharModalSubstitutos() {
+  document.getElementById('modal-substitutos').classList.remove('open');
 }
 
-.substituto-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
+document.getElementById('modal-substitutos').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalSubstitutos();
+});
+
+function renderSubstitutos(data) {
+  const body = document.getElementById('sub-modal-body');
+  if (!data.sucesso || !data.substitutos || data.substitutos.length === 0) {
+    body.innerHTML = `<div class="alert alert-info">Nenhum substituto disponível no momento.</div>`;
+    return;
+  }
+
+  const consulta = data.consulta;
+  let html = `
+    <div style="background:var(--bg-secondary);border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.25rem;font-size:0.88rem;color:var(--text-secondary);">
+      <strong style="color:var(--text-primary);">Horário a preencher:</strong>
+      ${consulta.data} às ${consulta.horario} — ${consulta.procedimento}
+    </div>`;
+
+  data.substitutos.forEach((sub, i) => {
+    const chanceSucesso = 100 - sub.probabilidade_falta;
+    const scoreColor = sub.score >= 70 ? 'success' : (sub.score >= 40 ? 'warning' : 'info');
+    html += `
+      <div class="sub-item">
+        <div class="sub-item-header">
+          <div class="sub-rank">${i + 1}º</div>
+          <div class="sub-name">${sub.nome}</div>
+          <span class="sub-badge ${scoreColor}">Score ${sub.score}/100</span>
+        </div>
+        <div class="sub-stats">
+          <div class="sub-stat-item">
+            <strong>${sub.tipo_pagamento}</strong>
+            Pagamento
+          </div>
+          <div class="sub-stat-item">
+            <strong>${chanceSucesso}%</strong>
+            Chance de comparecer
+          </div>
+          <div class="sub-stat-item">
+            <strong>${sub.confianca}%</strong>
+            Confiança IA
+          </div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:0.75rem;">
+          <div class="progress-fill success" style="width:${chanceSucesso}%"></div>
+        </div>
+        <div class="sub-justificativa">${sub.justificativa}</div>
+        <div class="sub-action-row">
+          <button class="sub-btn primary"
+                  onclick="confirmarSubstitutoModal('${sub.paciente_id}', '${consulta.data}', '${consulta.horario}')">
+            ✓ Confirmar Substituição
+          </button>
+        </div>
+      </div>`;
+  });
+
+  body.innerHTML = html;
 }
 
-.substituto-header strong {
-    font-size: 1rem;
-    color: var(--text-primary);
+async function confirmarSubstitutoModal(pacienteId, data, horario) {
+  if (!confirm(`Confirmar substituição de ${data} às ${horario}?`)) return;
+  const fd = new FormData();
+  fd.append('consulta_id', _subConsultaId);
+  fd.append('paciente_id', pacienteId);
+  fd.append('data', data);
+  fd.append('horario', horario);
+
+  try {
+    const res = await fetch('/reorganizacao/confirmar', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (json.sucesso) {
+      fecharModalSubstitutos();
+      // Remover card
+      const card = document.getElementById(`reorg-card-${_subConsultaId}`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => card.remove(), 400);
+      }
+      // Mostrar toast
+      showToast('Substituição confirmada com sucesso!', 'success');
+    } else {
+      alert('Erro: ' + json.mensagem);
+    }
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
 }
 
-.substituto-body {
-    font-size: 0.875rem;
-    color: var(--text-secondary);
+/* ── Modal Reagendamento ── */
+function abrirModalReagendamento(consultaId, nomePaciente) {
+  _reagConsultaId = consultaId;
+  document.getElementById('reag-modal-subtitle').textContent =
+    `Paciente: ${nomePaciente} — calculando janelas de menor risco`;
+  document.getElementById('reag-modal-body').innerHTML = `
+    <div class="loading-spinner">
+      <div class="spin">◌</div>
+      <p>Calculando melhores horários para este paciente…</p>
+    </div>`;
+  document.getElementById('modal-reagendamento').classList.add('open');
+
+  fetch(`/reorganizacao/reagendamento/${consultaId}`)
+    .then(r => r.json())
+    .then(data => renderReagendamento(data))
+    .catch(e => {
+      document.getElementById('reag-modal-body').innerHTML =
+        `<div class="alert alert-danger">Erro: ${e.message}</div>`;
+    });
 }
 
-.substituto-body p {
-    margin: 0.5rem 0;
+function fecharModalReagendamento() {
+  document.getElementById('modal-reagendamento').classList.remove('open');
 }
 
-.substituto-body .justificativa {
-    background-color: var(--bg-tertiary);
-    padding: 0.5rem;
-    border-radius: 4px;
-    margin: 0.75rem 0;
-    font-style: italic;
+document.getElementById('modal-reagendamento').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalReagendamento();
+});
+
+function renderReagendamento(data) {
+  const body = document.getElementById('reag-modal-body');
+  if (!data.sucesso || !data.opcoes || data.opcoes.length === 0) {
+    body.innerHTML = `<div class="alert alert-info">Nenhuma opção de reagendamento disponível.</div>`;
+    return;
+  }
+
+  let html = `
+    <div style="background:var(--warning-bg);border:1px solid var(--warning);border-radius:10px;padding:0.9rem 1.1rem;margin-bottom:1.25rem;font-size:0.85rem;color:var(--warning);">
+      <strong>Como funciona:</strong> A IA analisa o histórico do paciente e sugere horários onde a probabilidade de falta é menor. Confirmar o reagendamento move a consulta para a nova data.
+    </div>`;
+
+  data.opcoes.forEach((opcao, i) => {
+    html += `
+      <div class="reag-item">
+        <div class="reag-item-header">
+          <div class="reag-datetime">📅 ${opcao.data} às ${opcao.horario}</div>
+          <div class="reag-score">Score ${opcao.score}</div>
+        </div>
+        <div class="reag-stats">
+          <div class="reag-stat">
+            <strong>${opcao.probabilidade_falta}%</strong>
+            Risco de falta
+          </div>
+          <div class="reag-stat">
+            <strong style="color:var(--success)">-${opcao.reducao_risco_pp} p.p.</strong>
+            Redução de risco
+          </div>
+          <div class="reag-stat">
+            <strong>${opcao.confianca}%</strong>
+            Confiança IA
+          </div>
+        </div>
+        <div class="progress-bar" style="margin-bottom:0.6rem;">
+          <div class="progress-fill ${opcao.probabilidade_falta > 60 ? 'danger' : (opcao.probabilidade_falta > 30 ? 'warning' : 'success')}"
+               style="width:${opcao.probabilidade_falta}%"></div>
+        </div>
+        <div class="reag-justificativa">${opcao.justificativa}</div>
+        <div class="sub-action-row">
+          <button class="sub-btn primary"
+                  onclick="confirmarReagendamentoModal('${opcao.data}', '${opcao.horario}')">
+            ✓ Confirmar Reagendamento
+          </button>
+        </div>
+      </div>`;
+  });
+
+  body.innerHTML = html;
 }
 
-.substituto-card button {
-    width: 100%;
-    margin-top: 0.75rem;
-    padding: 0.5rem;
-    font-size: 0.875rem;
+async function confirmarReagendamentoModal(data, horario) {
+  if (!confirm(`Reagendar para ${data} às ${horario}?`)) return;
+  const fd = new FormData();
+  fd.append('consulta_id', _reagConsultaId);
+  fd.append('data', data);
+  fd.append('horario', horario);
+
+  try {
+    const res = await fetch('/reorganizacao/confirmar-reagendamento', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (json.sucesso) {
+      fecharModalReagendamento();
+      const card = document.getElementById(`reorg-card-${_reagConsultaId}`);
+      if (card) {
+        card.style.opacity = '0';
+        card.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => card.remove(), 400);
+      }
+      showToast(`Consulta reagendada para ${data} às ${horario}!`, 'success');
+    } else {
+      alert('Erro: ' + json.mensagem);
+    }
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  }
 }
-</style>
+
+/* ── Toast notification ── */
+function showToast(msg, type = 'success') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; bottom: 2rem; right: 2rem; z-index: 99999;
+    background: var(--${type}); color: #fff;
+    padding: 1rem 1.5rem; border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    font-weight: 700; font-size: 0.9rem;
+    animation: slideUpModal 0.3s ease both;
+    max-width: 340px;
+  `;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3500);
+}
+</script>
 {% endblock %}

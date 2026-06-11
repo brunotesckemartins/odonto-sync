@@ -21,8 +21,8 @@
   }
 
   .pep-avatar {
-    width: 64px;
-    height: 64px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     display: flex;
@@ -34,6 +34,33 @@
     color: #fff;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(47, 111, 109, 0.35);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .pep-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .pep-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    font-size: 1.2rem;
+  }
+
+  .pep-avatar:hover .pep-avatar-overlay {
+    opacity: 1;
   }
 
   .pep-meta h1 {
@@ -64,20 +91,30 @@
     margin-left: 0.35rem;
   }
 
-  .lgpd-badge {
-    display: flex;
+  /* Back button */
+  .btn-back {
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background-color: var(--info-bg);
-    color: var(--info);
-    border: 1px solid var(--info);
+    padding: 0.55rem 1.1rem;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 600;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-    align-self: flex-start;
+    cursor: pointer;
+    transition: var(--transition);
+    text-decoration: none;
+    margin-bottom: 0.75rem;
+    display: inline-flex;
+    box-shadow: none;
+  }
+  .btn-back:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    transform: translateX(-2px);
+    box-shadow: none;
   }
 
   /* Stats row */
@@ -465,9 +502,18 @@
 {% set comp = paciente.complexidade_tratamento or 'Baixa' %}
 
 {# ── Header ── #}
+<a href="/prontuario/" class="btn-back">← Voltar à lista</a>
 <div class="pep-header">
   <div class="pep-identity">
-    <div class="pep-avatar">{{ initials }}</div>
+    <div class="pep-avatar" onclick="document.getElementById('foto-upload').click()" title="Clique para trocar a foto">
+      {% if paciente.photo_url %}
+        <img src="{{ paciente.photo_url }}" alt="Foto" id="pep-avatar-img">
+      {% else %}
+        <span id="pep-avatar-initials">{{ initials }}</span>
+      {% endif %}
+      <div class="pep-avatar-overlay">📷</div>
+    </div>
+    <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="uploadFoto(this)">
     <div class="pep-meta">
       <h1>{{ paciente.nome_mascarado }}</h1>
       <p class="pep-id">
@@ -475,9 +521,6 @@
         <span class="id-chip">ID {{ paciente.id }}</span>
       </p>
     </div>
-  </div>
-  <div class="lgpd-badge">
-    ◈ Dados mascarados — conformidade LGPD
   </div>
 </div>
 
@@ -691,5 +734,40 @@
     btn.style.opacity = '0.75';
     btn.disabled = true;
   });
+
+  /* Upload foto de perfil */
+  async function uploadFoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const fd = new FormData();
+    fd.append('foto', file);
+
+    try {
+      const res = await fetch('/prontuario/{{ paciente.id }}/foto', {
+        method: 'POST',
+        body: fd
+      });
+      const json = await res.json();
+      if (json.sucesso) {
+        // Atualizar avatar na tela
+        const avatar = document.querySelector('.pep-avatar');
+        let img = document.getElementById('pep-avatar-img');
+        if (!img) {
+          img = document.createElement('img');
+          img.id = 'pep-avatar-img';
+          const initials = document.getElementById('pep-avatar-initials');
+          if (initials) initials.remove();
+          const overlay = avatar.querySelector('.pep-avatar-overlay');
+          avatar.insertBefore(img, overlay);
+        }
+        img.src = json.photo_url;
+        img.alt = 'Foto';
+      } else {
+        alert('Erro ao salvar foto: ' + json.mensagem);
+      }
+    } catch(e) {
+      alert('Erro de conexão: ' + e.message);
+    }
+  }
 </script>
 {% endblock %}

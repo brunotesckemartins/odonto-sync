@@ -28,6 +28,8 @@ def _ensure_schema(conn):
             cursor.execute("ALTER TABLE pacientes ADD COLUMN doenca_cronica INTEGER DEFAULT 0")
         if 'complexidade_tratamento' not in colunas_pacientes:
             cursor.execute("ALTER TABLE pacientes ADD COLUMN complexidade_tratamento TEXT DEFAULT 'Baixa'")
+        if 'photo_url' not in colunas_pacientes:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN photo_url TEXT")
 
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='consultas'")
     tabela_consultas_existe = bool(cursor.fetchone())
@@ -83,6 +85,7 @@ def init_db():
             fumante INTEGER DEFAULT 0,
             doenca_cronica INTEGER DEFAULT 0,
             complexidade_tratamento TEXT DEFAULT 'Baixa' CHECK (complexidade_tratamento IN ('Baixa', 'Média', 'Alta')),
+            photo_url TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -215,7 +218,7 @@ def get_consultas_do_dia(data):
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
                p.taxa_historica, p.tempo_como_paciente,
-               p.fumante, p.doenca_cronica, p.complexidade_tratamento
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
@@ -235,7 +238,7 @@ def get_consultas_alto_risco(data, threshold=0.6):
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
                p.taxa_historica, p.tempo_como_paciente,
-               p.fumante, p.doenca_cronica, p.complexidade_tratamento
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data = ? AND c.risco_calculado >= ?
@@ -255,7 +258,7 @@ def get_consultas_periodo(data_inicio, data_fim):
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
                p.taxa_historica, p.tempo_como_paciente,
-               p.fumante, p.doenca_cronica, p.complexidade_tratamento
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.data BETWEEN ? AND ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
@@ -275,7 +278,7 @@ def get_consulta_por_id(consulta_id):
     cursor.execute('''
         SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
                p.taxa_historica, p.tempo_como_paciente,
-               p.fumante, p.doenca_cronica, p.complexidade_tratamento
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
         WHERE c.id = ?
@@ -303,6 +306,21 @@ def get_data_referencia_consultas(data_referencia):
     row = cursor.fetchone()
     conn.close()
     return row['data_ref'] if row else None
+
+def get_datas_com_consultas(data_inicio=None):
+    """Retorna lista de datas distintas que possuem consultas (futuras ou todas)."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    if data_inicio:
+        cursor.execute(
+            'SELECT DISTINCT data FROM consultas WHERE data >= ? ORDER BY data ASC LIMIT 60',
+            (data_inicio,)
+        )
+    else:
+        cursor.execute('SELECT DISTINCT data FROM consultas ORDER BY data ASC LIMIT 60')
+    rows = cursor.fetchall()
+    conn.close()
+    return [r['data'] for r in rows]
 
 def atualizar_risco_consulta(consulta_id, risco):
     """Atualiza o risco calculado de uma consulta"""

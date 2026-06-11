@@ -1,28 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 import sys
 import os
+import base64
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from app.models.database import get_connection
 
 bp = Blueprint('prontuario', __name__, url_prefix='/prontuario')
-
-
-@bp.route('/')
-def index_prontuario():
-    """Redireciona para o prontuário do primeiro paciente disponível."""
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT id FROM pacientes ORDER BY nome ASC LIMIT 1')
-    row = cursor.fetchone()
-    conn.close()
-    if row:
-        return redirect(url_for('prontuario.visualizar_prontuario', paciente_id=row['id']))
-    return render_template('error.html',
-                           error_code=404,
-                           error_message='Nenhum paciente cadastrado',
-                           error_description='Não há pacientes no banco de dados ainda.'), 404
 
 
 def _mascarar_nome(nome):
@@ -34,6 +19,20 @@ def _mascarar_nome(nome):
     return f"{partes[0][0]}*** {partes[-1][0]}***"
 
 
+@bp.route('/')
+def index_prontuario():
+    """Tela de seleção de paciente para abrir o prontuário."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, nome, tipo_pagamento, faixa_etaria, faltas_anteriores, photo_url '
+        'FROM pacientes ORDER BY nome ASC LIMIT 300'
+    )
+    pacientes = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return render_template('prontuario_lista.html', pacientes=pacientes, active_page='prontuario')
+
+
 @bp.route('/<paciente_id>', methods=['GET'])
 def visualizar_prontuario(paciente_id):
     conn = get_connection()
@@ -41,7 +40,7 @@ def visualizar_prontuario(paciente_id):
     cursor.execute('''
         SELECT id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
                taxa_historica, tempo_como_paciente, fumante,
-               doenca_cronica, complexidade_tratamento
+               doenca_cronica, complexidade_tratamento, photo_url
         FROM pacientes
         WHERE id = ?
     ''', (paciente_id,))
@@ -83,3 +82,60 @@ def atualizar_prontuario(paciente_id):
 
     flash('Histórico clínico atualizado com sucesso.', 'success')
     return redirect(url_for('prontuario.visualizar_prontuario', paciente_id=paciente_id))
+
+
+@bp.route('/<paciente_id>/foto', methods=['POST'])
+def upload_foto(paciente_id):
+    """Salva a foto de perfil do paciente (base64 no banco)."""
+    try:
+        foto_file = request.files.get('foto')
+        if not foto_file:
+            return jsonify({'sucesso': False, 'mensagem': 'Nenhum arquivo enviado.'}), 400
+
+        # Aceitar jpg e png
+        allowed = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+        if foto_file.content_type not in allowed:
+            return jsonify({'sucesso': False, 'mensagem': 'Formato inválido. Use JPG ou PNG.'}), 400
+
+        # Ler e converter para data URI
+        foto_bytes = foto_file.read()
+        if len(foto_bytes) > 2 * 1024 * 1024:  # 2 MB max
+            return jsonify({'sucesso': False, 'mensagem': 'Imagem muito grande (máx 2 MB).'}), 400
+
+        foto_b64 = base64.b64encode(foto_bytes).decode('utf-8')
+        data_uri = f"data:{foto_file.content_type};base64,{foto_b64}"
+
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            'UPDATE pacientes SET photo_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            (data_uri, paciente_id)
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({'sucesso': True, 'photo_url': data_uri})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': str(e)}), 500
+
+
+@bp.route('/buscar')
+def buscar_pacientes():
+    """API para busca de pacientes por nome."""
+    q = request.args.get('q', '').strip()
+    conn = get_connection()
+    cursor = conn.cursor()
+    if q:
+        cursor.execute(
+            'SELECT id, nome, tipo_pagamento, faixa_etaria, faltas_anteriores, photo_url '
+            'FROM pacientes WHERE nome LIKE ? ORDER BY nome ASC LIMIT 20',
+            (f'%{q}%',)
+        )
+    else:
+        cursor.execute(
+            'SELECT id, nome, tipo_pagamento, faixa_etaria, faltas_anteriores, photo_url '
+            'FROM pacientes ORDER BY nome ASC LIMIT 20'
+        )
+    rows = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify({'pacientes': rows})
