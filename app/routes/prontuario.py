@@ -45,6 +45,17 @@ def visualizar_prontuario(paciente_id):
         WHERE id = ?
     ''', (paciente_id,))
     paciente = cursor.fetchone()
+
+    # Buscar consultas do paciente (mais recentes primeiro)
+    cursor.execute('''
+        SELECT id, data, horario, procedimento, status_atendimento, status_reorganizacao, compareceu
+        FROM consultas
+        WHERE paciente_id = ?
+        ORDER BY data DESC, horario DESC
+        LIMIT 20
+    ''', (paciente_id,))
+    consultas = [dict(r) for r in cursor.fetchall()]
+
     conn.close()
 
     if not paciente:
@@ -56,7 +67,7 @@ def visualizar_prontuario(paciente_id):
     paciente_dict = dict(paciente)
     paciente_dict['nome_mascarado'] = _mascarar_nome(paciente_dict.get('nome'))
 
-    return render_template('prontuario.html', paciente=paciente_dict, active_page='prontuario')
+    return render_template('prontuario.html', paciente=paciente_dict, consultas=consultas, active_page='prontuario')
 
 
 @bp.route('/<paciente_id>', methods=['POST'])

@@ -446,9 +446,15 @@
     </p>
   </div>
   <div class="toolbar-actions">
-    <button class="btn-secondary" id="btn-gerar-ficticia" onclick="gerarAgendaFicticia()">
+    <button class="btn-secondary" id="btn-gerar-ficticia" onclick="abrirModalDemoData()">
       ✦ Gerar Agenda Demo
     </button>
+    <button class="btn-secondary" id="btn-limpar-demo" onclick="limparPacientesDemo()" title="Remover todas as consultas e pacientes demo">
+      🗑 Limpar Demo
+    </button>
+    <a href="/agendamentos-futuros" class="btn-secondary">
+      📅 Ver Futuros
+    </a>
     <button class="btn-secondary" onclick="abrirModalCriarPaciente()">
       ＋ Novo Paciente
     </button>
@@ -572,6 +578,10 @@
                     onclick="buscarReagendamento({{ c.id }})">
               ↻ Reagendar
             </button>
+            <button class="action-btn danger-ghost"
+                    onclick="excluirConsulta({{ c.id }})">
+              ✕ Excluir
+            </button>
           </div>
         </td>
       </tr>
@@ -591,7 +601,7 @@
     <h3>Nenhuma consulta para este dia</h3>
     <p>Crie uma agenda de demonstração, agende uma consulta ou selecione outra data acima.</p>
     <div style="display:flex; gap:0.75rem; justify-content:center; flex-wrap:wrap;">
-      <button class="btn-secondary" onclick="gerarAgendaFicticia()">✦ Gerar Agenda Demo</button>
+      <button class="btn-secondary" onclick="abrirModalDemoData()">✦ Gerar Agenda Demo</button>
       <button class="btn-primary" onclick="abrirModalAgendar()">+ Agendar Consulta</button>
     </div>
   </div>
@@ -738,6 +748,29 @@
   </div>
 </div>
 
+{# ── Modal de Demo Data ── #}
+<div class="modal-overlay" id="modal-demo-data">
+  <div class="modal-box" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2>Gerar Agenda Demo</h2>
+      <button class="modal-close" onclick="fecharModalDemoData()" aria-label="Fechar">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-field">
+        <label for="demo-data-pick">Data para gerar agenda demo *</label>
+        <input type="date" id="demo-data-pick" required>
+      </div>
+      <div id="demo-status" style="min-height:1.5rem; font-size:0.85rem; font-weight:500;"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="fecharModalDemoData()">Cancelar</button>
+      <button class="btn-primary" id="btn-confirmar-demo" onclick="confirmarGerarDemo()">
+        ✦ Gerar Agenda Demo
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ── Patient Search ── */
 let todosOsPacientes = [];
@@ -797,7 +830,8 @@ function selecionarPaciente(id, nome, tipo) {
 function abrirModalAgendar() {
   document.getElementById('modal-agendar').classList.add('open');
   const today = new Date().toISOString().split('T')[0];
-  document.getElementById('ag-data').value = '{{ data_selecionada }}' || today;
+  const dataSel = '{{ data_selecionada }}';
+  document.getElementById('ag-data').value = dataSel || today;
   carregarPacientes();
   setupPacienteSearch();
 }
@@ -915,7 +949,12 @@ async function confirmarCriarPaciente() {
     if (json.sucesso) {
       statusEl.textContent = json.mensagem;
       statusEl.className = 'status-ok';
-      pacienteCarregado = false; // força reload da lista
+      // Adicionar imediatamente o novo paciente à lista local e forçar reload
+      if (json.paciente) {
+        todosOsPacientes.push(json.paciente);
+        todosOsPacientes.sort((a,b) => a.nome.localeCompare(b.nome));
+      }
+      pacienteCarregado = false; // força reload completo na próxima vez
       setTimeout(() => fecharModalCriarPaciente(), 1500);
     } else {
       statusEl.textContent = json.mensagem;
@@ -929,27 +968,93 @@ async function confirmarCriarPaciente() {
   }
 }
 
-/* ── Gerar Agenda Demo ── */
-async function gerarAgendaFicticia() {
-  const btn = document.getElementById('btn-gerar-ficticia');
-  if (!btn) return;
-  const orig = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = 'Gerando…';
+/* ── Modal Demo Data ── */
+function abrirModalDemoData() {
+  const today = new Date().toISOString().split('T')[0];
+  const dataSel = '{{ data_selecionada }}';
+  document.getElementById('demo-data-pick').value = dataSel || today;
+  document.getElementById('demo-status').textContent = '';
+  document.getElementById('modal-demo-data').classList.add('open');
+}
 
+function fecharModalDemoData() {
+  document.getElementById('modal-demo-data').classList.remove('open');
+}
+
+document.getElementById('modal-demo-data').addEventListener('click', function(e) {
+  if (e.target === this) fecharModalDemoData();
+});
+
+async function confirmarGerarDemo() {
+  const data = document.getElementById('demo-data-pick').value;
+  const statusEl = document.getElementById('demo-status');
+  const btn = document.getElementById('btn-confirmar-demo');
+  if (!data) { statusEl.textContent = 'Selecione uma data.'; statusEl.className = 'status-err'; return; }
+  btn.disabled = true;
+  statusEl.textContent = 'Gerando…';
+  statusEl.className = 'status-info';
   try {
-    const res  = await fetch('/gerar-agenda-ficticia', { method: 'POST' });
+    const res  = await fetch('/gerar-agenda-ficticia', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data })
+    });
     const json = await res.json();
     if (json.sucesso) {
-      location.href = '/';
+      fecharModalDemoData();
+      window.location.href = json.redirect || '/?data=' + data;
+    } else {
+      statusEl.textContent = 'Erro: ' + json.mensagem;
+      statusEl.className = 'status-err';
+    }
+  } catch(e) {
+    statusEl.textContent = 'Erro de conexão: ' + e.message;
+    statusEl.className = 'status-err';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/* ── Limpar Pacientes Demo ── */
+async function limparPacientesDemo() {
+  if (!confirm('Remover todas as consultas demo e pacientes sem consultas reais?')) return;
+  const btn = document.getElementById('btn-limpar-demo');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Limpando…';
+  try {
+    const res  = await fetch('/limpar-pacientes-demo', { method: 'POST' });
+    const json = await res.json();
+    if (json.sucesso) {
+      alert(json.mensagem);
+      location.reload();
+    } else {
+      alert('Erro: ' + json.mensagem);
+    }
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+/* ── Excluir Consulta Individual ── */
+async function excluirConsulta(consultaId) {
+  if (!confirm('Excluir esta consulta da agenda?')) return;
+  try {
+    const res  = await fetch(`/excluir-consulta/${consultaId}`, { method: 'POST' });
+    const json = await res.json();
+    if (json.sucesso) {
+      const row = document.getElementById(`consulta-row-${consultaId}`);
+      const panel = document.getElementById(`consulta-panel-${consultaId}`);
+      if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.3s'; setTimeout(() => row.remove(), 300); }
+      if (panel) setTimeout(() => panel.remove(), 300);
     } else {
       alert('Erro: ' + json.mensagem);
     }
   } catch(e) {
     alert('Erro de conexão: ' + e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = orig;
   }
 }
 

@@ -119,6 +119,48 @@ def index():
     )
 
 
+@bp.route('/agendamentos-futuros')
+def agendamentos_futuros():
+    """Exibe todos os agendamentos futuros (a partir de hoje)."""
+    hoje = datetime.now().strftime('%Y-%m-%d')
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+               p.taxa_historica, p.tempo_como_paciente,
+               p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
+        FROM consultas c
+        JOIN pacientes p ON c.paciente_id = p.id
+        WHERE c.data >= ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
+        ORDER BY c.data ASC, c.horario ASC
+    ''', (hoje,))
+    todas_consultas = cursor.fetchall()
+    conn.close()
+
+    consultas_com_risco, stats = _calcular_risco_consultas(todas_consultas) if todas_consultas else ([], {'total': 0, 'alto_risco': 0, 'medio_risco': 0, 'baixo_risco': 0})
+
+    # Agrupar por data para exibição
+    from collections import OrderedDict
+    consultas_por_data = OrderedDict()
+    for c in consultas_com_risco:
+        d = c['data']
+        if d not in consultas_por_data:
+            consultas_por_data[d] = []
+        consultas_por_data[d].append(c)
+
+    datas_disponiveis = get_datas_com_consultas(hoje)
+
+    return render_template(
+        'agendamentos_futuros.html',
+        consultas_por_data=consultas_por_data,
+        stats=stats,
+        hoje=hoje,
+        datas_disponiveis=datas_disponiveis,
+        active_page='agenda'
+    )
+
+
 @bp.route('/agendar', methods=['POST'])
 def agendar_consulta():
     """Cria uma nova consulta para um paciente existente."""
@@ -211,27 +253,127 @@ def criar_paciente():
         return jsonify({
             'sucesso': True,
             'mensagem': f'Paciente "{nome}" criado com sucesso!',
-            'paciente_id': paciente_id
+            'paciente_id': paciente_id,
+            'paciente': {
+                'id': paciente_id,
+                'nome': nome,
+                'tipo_pagamento': tipo_pagamento
+            }
         })
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro ao criar paciente: {str(e)}'}), 500
 
 
+@bp.route('/excluir-paciente/<paciente_id>', methods=['POST'])
+def excluir_paciente(paciente_id):
+    """Exclui um paciente e todas as suas consultas do banco."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Verificar se o paciente existe
+        cursor.execute('SELECT id, nome FROM pacientes WHERE id = ?', (paciente_id,))
+        paciente = cursor.fetchone()
+        if not paciente:
+            conn.close()
+            return jsonify({'sucesso': False, 'mensagem': 'Paciente não encontrado.'}), 404
+
+        nome = paciente['nome']
+
+        # Excluir consultas e paciente
+        cursor.execute('DELETE FROM consultas WHERE paciente_id = ?', (paciente_id,))
+        cursor.execute('DELETE FROM pacientes WHERE id = ?', (paciente_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'sucesso': True, 'mensagem': f'Paciente "{nome}" excluído com sucesso.'})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao excluir paciente: {str(e)}'}), 500
+
+
+@bp.route('/excluir-consulta/<int:consulta_id>', methods=['POST'])
+def excluir_consulta(consulta_id):
+    """Exclui uma consulta individual do banco."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT id FROM consultas WHERE id = ?', (consulta_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'sucesso': False, 'mensagem': 'Consulta não encontrada.'}), 404
+
+        cursor.execute('DELETE FROM consultas WHERE id = ?', (consulta_id,))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'sucesso': True, 'mensagem': 'Consulta excluída com sucesso.'})
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro ao excluir consulta: {str(e)}'}), 500
+
+
+@bp.route('/limpar-pacientes-demo', methods=['POST'])
+def limpar_pacientes_demo():
+    """Remove todos os pacientes demo (gerados automaticamente) e suas consultas."""
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        # Pacientes demo: aqueles cujas TODAS as consultas são 'ficticio',
+        # ou pacientes sem nenhuma consulta real (não ficticia)
+        # Estratégia: remover consultas fictícias e depois pacientes sem nenhuma consulta
+        cursor.execute("DELETE FROM consultas WHERE status_reorganizacao = 'ficticio'")
+        ficticio_count = cursor.rowcount
+
+        # Remover pacientes que ficaram sem nenhuma consulta e cujo ID parece gerado (8 chars uppercase)
+        # Para segurança, só remove pacientes sem consultas
+        cursor.execute('''
+            DELETE FROM pacientes
+            WHERE id NOT IN (SELECT DISTINCT paciente_id FROM consultas)
+        ''')
+        pacientes_count = cursor.rowcount
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'sucesso': True,
+            'mensagem': f'{ficticio_count} consulta(s) demo removidas. {pacientes_count} paciente(s) sem consultas removidos.'
+        })
+    except Exception as e:
+        return jsonify({'sucesso': False, 'mensagem': f'Erro: {str(e)}'}), 500
+
+
 @bp.route('/gerar-agenda-ficticia', methods=['POST'])
 def gerar_agenda_ficticia():
-    """Gera consultas fictícias para hoje para fins de demonstração."""
+    """Gera consultas fictícias para uma data específica para fins de demonstração."""
     try:
-        hoje = datetime.now().strftime('%Y-%m-%d')
-        hoje_dt = datetime.now()
-        dia_semana = hoje_dt.strftime('%A')
+        # Suporta data via JSON ou form
+        data_alvo = None
+        if request.is_json:
+            data_alvo = (request.json or {}).get('data', '').strip()
+        else:
+            data_alvo = request.form.get('data', '').strip()
+
+        if data_alvo:
+            # Validar formato
+            try:
+                dt_alvo = datetime.strptime(data_alvo, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({'sucesso': False, 'mensagem': 'Data inválida.'}), 400
+        else:
+            dt_alvo = datetime.now()
+            data_alvo = dt_alvo.strftime('%Y-%m-%d')
+
+        dia_semana = dt_alvo.strftime('%A')
 
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Remover consultas fictícias anteriores de hoje
+        # Remover consultas fictícias anteriores desta data
         cursor.execute(
             "DELETE FROM consultas WHERE data = ? AND status_reorganizacao = 'ficticio'",
-            (hoje,)
+            (data_alvo,)
         )
 
         # Buscar pacientes reais
@@ -253,7 +395,7 @@ def gerar_agenda_ficticia():
         temp_hoje = random.randint(20, 32)
 
         feriados_mm_dd = {'01-01','04-21','05-01','09-07','10-12','11-02','11-15','12-25'}
-        proximo_feriado = 1 if hoje_dt.strftime('%m-%d') in feriados_mm_dd else 0
+        proximo_feriado = 1 if dt_alvo.strftime('%m-%d') in feriados_mm_dd else 0
 
         inseridos = 0
         for i, pid in enumerate(pacientes_ids[:len(horarios)]):
@@ -271,7 +413,7 @@ def gerar_agenda_ficticia():
                      antecedencia_dias, e_retorno, n_remarcacoes, proximo_feriado,
                      condicao_clima, temperatura, status_reorganizacao)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ficticio')
-            ''', (pid, hoje, horario, dia_semana, turno, proc,
+            ''', (pid, data_alvo, horario, dia_semana, turno, proc,
                   antecedencia, e_retorno, n_rem, proximo_feriado,
                   clima_hoje, temp_hoje))
             inseridos += 1
@@ -281,8 +423,8 @@ def gerar_agenda_ficticia():
 
         return jsonify({
             'sucesso': True,
-            'mensagem': f'{inseridos} consultas demo geradas para hoje ({hoje}).',
-            'redirect': '/'
+            'mensagem': f'{inseridos} consultas demo geradas para {data_alvo}.',
+            'redirect': f'/?data={data_alvo}'
         })
     except Exception as e:
         return jsonify({'sucesso': False, 'mensagem': f'Erro: {str(e)}'}), 500
@@ -292,9 +434,16 @@ def gerar_agenda_ficticia():
 def pacientes_lista():
     """Retorna lista de pacientes para o select do modal de agendamento."""
     try:
+        q = request.args.get('q', '').strip()
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT id, nome, tipo_pagamento FROM pacientes ORDER BY nome ASC LIMIT 300')
+        if q:
+            cursor.execute(
+                'SELECT id, nome, tipo_pagamento FROM pacientes WHERE nome LIKE ? ORDER BY nome ASC LIMIT 20',
+                (f'%{q}%',)
+            )
+        else:
+            cursor.execute('SELECT id, nome, tipo_pagamento FROM pacientes ORDER BY nome ASC LIMIT 300')
         rows = cursor.fetchall()
         conn.close()
         return jsonify({

@@ -172,6 +172,64 @@
     opacity: 0.35;
     margin-bottom: 0.75rem;
   }
+
+  /* Patient card wrapper with delete button */
+  .paciente-card-wrap {
+    position: relative;
+  }
+
+  .paciente-card-wrap .paciente-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 1.4rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    width: 100%;
+    animation: rise-in 0.4s ease both;
+  }
+
+  .paciente-card-wrap .paciente-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--accent-primary);
+  }
+
+  .pac-delete-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: none;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 5;
+  }
+
+  .paciente-card-wrap:hover .pac-delete-btn {
+    opacity: 1;
+  }
+
+  .pac-delete-btn:hover {
+    background: var(--danger);
+    color: #fff;
+    transform: scale(1.1);
+  }
 </style>
 
 <div class="pep-lista-header page-header">
@@ -194,26 +252,30 @@
 <div class="pacientes-grid" id="pacientes-grid">
   {% for p in pacientes %}
   {% set initials = (p.nome or 'P')[0] | upper %}
-  <a href="/prontuario/{{ p.id }}" class="paciente-card" data-nome="{{ p.nome | lower }}">
-    <div class="pac-avatar">
-      {% if p.photo_url %}
-        <img src="{{ p.photo_url }}" alt="{{ p.nome }}">
-      {% else %}
-        {{ initials }}
-      {% endif %}
-    </div>
-    <div class="pac-info">
-      <div class="pac-nome">{{ p.nome }}</div>
-      <div class="pac-meta">
-        <span class="pac-tag">{{ p.tipo_pagamento }}</span>
-        <span class="pac-tag">{{ p.faixa_etaria }} anos</span>
-        {% if p.faltas_anteriores >= 3 %}
-          <span class="pac-tag danger">{{ p.faltas_anteriores }} faltas</span>
+  <div class="paciente-card-wrap" id="pac-wrap-{{ p.id }}" data-nome="{{ p.nome | lower }}">
+    <a href="/prontuario/{{ p.id }}" class="paciente-card">
+      <div class="pac-avatar">
+        {% if p.photo_url %}
+          <img src="{{ p.photo_url }}" alt="{{ p.nome }}">
+        {% else %}
+          {{ initials }}
         {% endif %}
       </div>
-    </div>
-    <span class="pac-arrow">›</span>
-  </a>
+      <div class="pac-info">
+        <div class="pac-nome">{{ p.nome }}</div>
+        <div class="pac-meta">
+          <span class="pac-tag">{{ p.tipo_pagamento }}</span>
+          <span class="pac-tag">{{ p.faixa_etaria }} anos</span>
+          {% if p.faltas_anteriores >= 3 %}
+            <span class="pac-tag danger">{{ p.faltas_anteriores }} faltas</span>
+          {% endif %}
+        </div>
+      </div>
+      <span class="pac-arrow">›</span>
+    </a>
+    <button class="pac-delete-btn" onclick="excluirPaciente('{{ p.id }}', {{ p.nome | tojson }})"
+      title="Excluir paciente">✕</button>
+  </div>
   {% endfor %}
 </div>
 
@@ -224,7 +286,7 @@
 
 <script>
 const searchInput = document.getElementById('search-paciente');
-const cards = document.querySelectorAll('.paciente-card');
+const cards = document.querySelectorAll('.paciente-card-wrap');
 const countLabel = document.getElementById('count-label');
 const noResults = document.getElementById('no-results');
 const noResultsQuery = document.getElementById('no-results-query');
@@ -250,5 +312,25 @@ searchInput.addEventListener('input', () => {
 
 // Auto-focus
 searchInput.focus();
+
+async function excluirPaciente(pacienteId, nome) {
+  if (!confirm(`Excluir "${nome}" e todas as suas consultas? Esta ação não pode ser desfeita.`)) return;
+  try {
+    const res  = await fetch(`/excluir-paciente/${pacienteId}`, { method: 'POST' });
+    const json = await res.json();
+    if (json.sucesso) {
+      const wrap = document.getElementById(`pac-wrap-${pacienteId}`);
+      if (wrap) {
+        wrap.style.opacity = '0';
+        wrap.style.transition = 'opacity 0.3s';
+        setTimeout(() => wrap.remove(), 300);
+      }
+    } else {
+      alert('Erro: ' + json.mensagem);
+    }
+  } catch(e) {
+    alert('Erro de conexão: ' + e.message);
+  }
+}
 </script>
 {% endblock %}

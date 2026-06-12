@@ -522,6 +522,15 @@
       </p>
     </div>
   </div>
+  <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+    <button onclick="abrirModalAgendar()" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.1rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-hover));color:#fff;border:none;border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:var(--transition);box-shadow:0 3px 8px rgba(47,111,109,0.3);">
+      + Agendar Consulta
+    </button>
+    <button onclick="excluirPaciente('{{ paciente.id }}', '{{ paciente.nome_mascarado }}')"
+      style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.6rem 1.1rem;background:transparent;color:var(--danger);border:1px solid var(--danger-bg);border-radius:9px;font-size:0.85rem;font-weight:700;cursor:pointer;transition:var(--transition);">
+      ✕ Excluir Paciente
+    </button>
+  </div>
 </div>
 
 {# ── Flash messages ── #}
@@ -726,6 +735,102 @@
 
 </div>{# end pep-layout #}
 
+{# ── Histórico de Consultas ── #}
+{% if consultas %}
+<div style="margin-top:2rem;">
+  <div style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-secondary);margin-bottom:0.75rem;">Histórico de Consultas</div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Horário</th>
+          <th>Procedimento</th>
+          <th>Status</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in consultas %}
+        <tr id="pep-consult-{{ c.id }}">
+          <td><strong>{{ c.data[8:10] }}/{{ c.data[5:7] }}/{{ c.data[0:4] }}</strong></td>
+          <td>{{ c.horario }}</td>
+          <td>{{ c.procedimento }}</td>
+          <td>
+            {% if c.compareceu == 1 %}
+              <span style="color:var(--success);font-weight:700;">Realizado</span>
+            {% elif c.compareceu == 0 and c.status_atendimento %}
+              <span style="color:var(--danger);font-weight:700;">Falta</span>
+            {% elif c.status_reorganizacao == 'ficticio' %}
+              <span style="color:var(--info);font-weight:600;">Demo</span>
+            {% else %}
+              <span style="color:var(--text-secondary);font-weight:500;">Agendado</span>
+            {% endif %}
+          </td>
+          <td>
+            <button onclick="excluirConsultaPEP({{ c.id }})"
+              style="padding:0.3rem 0.7rem;background:transparent;color:var(--danger);border:1px solid var(--danger-bg);border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:var(--transition);">
+              ✕
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── Modal de Agendamento ── #}
+<div class="modal-overlay" id="modal-agendar-pep" style="display:none;">
+  <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:20px;box-shadow:var(--shadow-lg);width:min(540px,95vw);max-height:90vh;overflow-y:auto;animation:slideUpModal 0.25s ease;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border-color);">
+      <h2 style="font-family:var(--font-heading);font-size:1.2rem;font-weight:700;color:var(--text-primary);">Agendar Consulta</h2>
+      <button onclick="fecharModalAgendar()" style="background:none;border:none;font-size:1.4rem;color:var(--text-secondary);cursor:pointer;">&times;</button>
+    </div>
+    <div style="padding:1.5rem 2rem;">
+      <div style="margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg-secondary);border-radius:10px;font-size:0.88rem;color:var(--text-secondary);">
+        Paciente: <strong style="color:var(--text-primary);">{{ paciente.nome_mascarado }}</strong>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Data *</label>
+          <input type="date" id="pep-ag-data" style="width:100%;padding:0.8rem 1rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;font-size:0.9rem;color:var(--text-primary);">
+        </div>
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Horário *</label>
+          <select id="pep-ag-horario" style="width:100%;padding:0.8rem 1rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;font-size:0.9rem;color:var(--text-primary);">
+            <option>08:00</option><option>08:30</option><option>09:00</option><option>09:30</option>
+            <option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option>
+            <option selected>14:00</option><option>14:30</option><option>15:00</option><option>15:30</option>
+            <option>16:00</option><option>16:30</option><option>17:00</option><option>17:30</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Procedimento</label>
+          <select id="pep-ag-proc" style="width:100%;padding:0.8rem 1rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;font-size:0.9rem;color:var(--text-primary);">
+            <option>Consulta</option><option>Limpeza</option><option>Obturação</option>
+            <option>Extração</option><option>Canal</option><option>Clareamento</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">É retorno?</label>
+          <select id="pep-ag-retorno" style="width:100%;padding:0.8rem 1rem;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:10px;font-size:0.9rem;color:var(--text-primary);">
+            <option value="0">Não</option><option value="1">Sim</option>
+          </select>
+        </div>
+      </div>
+      <div id="pep-ag-status" style="min-height:1.4rem;font-size:0.85rem;font-weight:500;"></div>
+    </div>
+    <div style="padding:1rem 2rem 1.5rem;display:flex;gap:0.75rem;justify-content:flex-end;">
+      <button onclick="fecharModalAgendar()" style="padding:0.75rem 1.4rem;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;font-size:0.9rem;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button id="btn-pep-ag" onclick="confirmarAgendamentoPEP()" style="padding:0.75rem 1.4rem;background:linear-gradient(135deg,var(--accent-primary),var(--accent-hover));color:#fff;border:none;border-radius:10px;font-size:0.9rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(47,111,109,0.3);">Confirmar Agendamento</button>
+    </div>
+  </div>
+</div>
+
 <script>
   /* Visual feedback on save */
   document.getElementById('pep-form').addEventListener('submit', function () {
@@ -764,6 +869,109 @@
         img.alt = 'Foto';
       } else {
         alert('Erro ao salvar foto: ' + json.mensagem);
+      }
+    } catch(e) {
+      alert('Erro de conexão: ' + e.message);
+    }
+  }
+
+  /* ── Modal de Agendamento PEP ── */
+  function abrirModalAgendar() {
+    const modal = document.getElementById('modal-agendar-pep');
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.position = 'fixed';
+    modal.style.inset = '0';
+    modal.style.background = 'rgba(0,0,0,0.45)';
+    modal.style.backdropFilter = 'blur(4px)';
+    modal.style.zIndex = '9000';
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pep-ag-data').value = today;
+    document.getElementById('pep-ag-status').textContent = '';
+  }
+
+  function fecharModalAgendar() {
+    document.getElementById('modal-agendar-pep').style.display = 'none';
+    document.getElementById('pep-ag-status').textContent = '';
+  }
+
+  document.getElementById('modal-agendar-pep').addEventListener('click', function(e) {
+    if (e.target === this) fecharModalAgendar();
+  });
+
+  async function confirmarAgendamentoPEP() {
+    const data    = document.getElementById('pep-ag-data').value;
+    const horario = document.getElementById('pep-ag-horario').value;
+    const proc    = document.getElementById('pep-ag-proc').value;
+    const retorno = document.getElementById('pep-ag-retorno').value;
+    const statusEl = document.getElementById('pep-ag-status');
+    const btn     = document.getElementById('btn-pep-ag');
+
+    if (!data || !horario) {
+      statusEl.textContent = 'Preencha data e horário.';
+      statusEl.style.color = 'var(--danger)';
+      return;
+    }
+    btn.disabled = true;
+    statusEl.textContent = 'Salvando…';
+    statusEl.style.color = 'var(--info)';
+
+    try {
+      const fd = new FormData();
+      fd.append('paciente_id', '{{ paciente.id }}');
+      fd.append('data', data);
+      fd.append('horario', horario);
+      fd.append('procedimento', proc);
+      fd.append('e_retorno', retorno);
+
+      const res  = await fetch('/agendar', { method: 'POST', body: fd });
+      const json = await res.json();
+
+      if (json.sucesso) {
+        statusEl.textContent = json.mensagem;
+        statusEl.style.color = 'var(--success)';
+        setTimeout(() => { fecharModalAgendar(); location.reload(); }, 1500);
+      } else {
+        statusEl.textContent = json.mensagem;
+        statusEl.style.color = 'var(--danger)';
+      }
+    } catch(e) {
+      statusEl.textContent = 'Erro de conexão.';
+      statusEl.style.color = 'var(--danger)';
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  /* ── Excluir Paciente ── */
+  async function excluirPaciente(pacienteId, nome) {
+    if (!confirm(`Excluir o paciente "${nome}" e todas as suas consultas? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const res  = await fetch(`/excluir-paciente/${pacienteId}`, { method: 'POST' });
+      const json = await res.json();
+      if (json.sucesso) {
+        alert(json.mensagem);
+        window.location.href = '/prontuario/';
+      } else {
+        alert('Erro: ' + json.mensagem);
+      }
+    } catch(e) {
+      alert('Erro de conexão: ' + e.message);
+    }
+  }
+
+  /* ── Excluir Consulta do Histórico ── */
+  async function excluirConsultaPEP(consultaId) {
+    if (!confirm('Excluir esta consulta do histórico?')) return;
+    try {
+      const res  = await fetch(`/excluir-consulta/${consultaId}`, { method: 'POST' });
+      const json = await res.json();
+      if (json.sucesso) {
+        const row = document.getElementById(`pep-consult-${consultaId}`);
+        if (row) { row.style.opacity = '0'; row.style.transition = 'opacity 0.3s'; setTimeout(() => row.remove(), 300); }
+      } else {
+        alert('Erro: ' + json.mensagem);
       }
     } catch(e) {
       alert('Erro de conexão: ' + e.message);
