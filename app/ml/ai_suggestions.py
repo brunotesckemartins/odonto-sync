@@ -75,19 +75,24 @@ CONTEXTO:
 - Paciente original com alto risco de falta precisa ser substituído
 - Data/Horário: {date} às {time}
 
-DADOS DO PACIENTE ORIGINAL:
+DADOS DO PACIENTE ORIGINAL (PEP):
 - Nome: {original.get('nome', 'N/A')}
 - Probabilidade de falta: {original.get('probabilidade', 0):.1%}
 - Faltas anteriores: {original.get('faltas_anteriores', 0)}
+- Condições PEP: Fumante ({'Sim' if original.get('fumante') else 'Não'}), Doença Crônica ({'Sim' if original.get('doenca_cronica') else 'Não'})
+- Complexidade do Tratamento (PEP): {original.get('complexidade_tratamento', 'Baixa')}
 
-CANDIDATO SUBSTITUTO:
+CANDIDATO SUBSTITUTO (PEP):
 - Nome: {candidate.get('nome', 'N/A')}
 - Probabilidade de falta: {candidate.get('probabilidade', 0):.1%}
 - Faltas anteriores: {candidate.get('faltas_anteriores', 0)}
+- Idade/Faixa (PEP): {candidate.get('faixa_etaria', 'N/A')}
+- Condições PEP: Fumante ({'Sim' if candidate.get('fumante') else 'Não'}), Doença Crônica ({'Sim' if candidate.get('doenca_cronica') else 'Não'})
+- Complexidade do Tratamento (PEP): {candidate.get('complexidade_tratamento', 'Baixa')}
 - Tipo de pagamento: {candidate.get('tipo_pagamento', 'N/A')}
 - Tempo como paciente: {candidate.get('tempo_como_paciente', 0)} meses
 - Taxa histórica de faltas: {candidate.get('taxa_historica', 0):.1%}
-- Score de compatibilidade: {candidate.get('compatibilidade', 0):.0f}/100
+- Score de compatibilidade algorítmica: {candidate.get('compatibilidade', 0):.0f}/100
 
 TAREFA:
 Gere uma justificativa CONCISA (máximo 2 linhas) explicando POR QUE este candidato é uma boa substituição.

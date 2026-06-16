@@ -221,7 +221,7 @@ def get_consultas_do_dia(data):
                p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.data = ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
+        WHERE c.data = ? AND c.status_atendimento IS NULL
         ORDER BY c.horario
     ''', (data,))
     
@@ -261,7 +261,7 @@ def get_consultas_periodo(data_inicio, data_fim):
                p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.data BETWEEN ? AND ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
+        WHERE c.data BETWEEN ? AND ? AND c.status_atendimento IS NULL
         ORDER BY c.data ASC, c.horario ASC
     ''', (data_inicio, data_fim))
 

@@ -806,7 +806,7 @@ function setupPacienteSearch() {
       return;
     }
     dropdown.innerHTML = results.map(p => `
-      <div class="patient-opt" onclick="selecionarPaciente('${p.id}', ${JSON.stringify(p.nome)}, '${p.tipo_pagamento}')">
+      <div class="patient-opt" data-nome="${p.nome}" onclick="selecionarPaciente('${p.id}', this.dataset.nome, '${p.tipo_pagamento}')">
         ${p.nome} <small>(${p.tipo_pagamento})</small>
       </div>
     `).join('');

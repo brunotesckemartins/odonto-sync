@@ -26,7 +26,7 @@ def index_prontuario():
     cursor = conn.cursor()
     cursor.execute(
         'SELECT id, nome, tipo_pagamento, faixa_etaria, faltas_anteriores, photo_url '
-        'FROM pacientes ORDER BY nome ASC LIMIT 300'
+        'FROM pacientes ORDER BY nome ASC'
     )
     pacientes = [dict(r) for r in cursor.fetchall()]
     conn.close()

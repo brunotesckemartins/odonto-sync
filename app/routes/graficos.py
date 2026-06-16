@@ -13,6 +13,7 @@ import os
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from config import Config
+from app.models.database import get_connection
 import joblib
 
 bp = Blueprint('graficos', __name__, url_prefix='/graficos')
@@ -27,8 +28,21 @@ def index():
     """Página de análise exploratória com gráficos"""
     
     try:
-        # Carregar dados
-        df = pd.read_csv(Config.CSV_PATH)
+        # Carregar dados do banco SQLite
+        conn = get_connection()
+        df = pd.read_sql_query('''
+            SELECT c.*, p.nome, p.faixa_etaria, p.tipo_pagamento, p.faltas_anteriores,
+                   p.taxa_historica, p.tempo_como_paciente,
+                   p.fumante, p.doenca_cronica, p.complexidade_tratamento
+            FROM consultas c
+            JOIN pacientes p ON c.paciente_id = p.id
+            WHERE c.compareceu IS NOT NULL
+        ''', conn)
+        conn.close()
+        
+        # Fallback caso o banco esteja vazio de histórico
+        if df.empty:
+            df = pd.read_csv(Config.CSV_PATH)
         
         # Gerar gráficos
         graficos = {

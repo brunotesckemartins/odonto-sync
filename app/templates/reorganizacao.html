@@ -131,8 +131,10 @@
     padding: 0.6rem 0.75rem;
     border-radius: 8px;
     font-size: 0.82rem;
-    font-weight: 700;
-    border: none;
+    font-weight: 600;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-primary);
     cursor: pointer;
     transition: var(--transition);
     text-align: center;
@@ -142,44 +144,19 @@
     gap: 0.35rem;
   }
 
+  .action-btn-reorg:hover {
+    background: var(--bg-secondary);
+  }
+
   .action-btn-reorg.confirm {
-    background: var(--success-bg);
-    color: var(--success);
-    border: 1px solid var(--success);
     grid-column: 1 / -1;
   }
 
-  .action-btn-reorg.confirm:hover {
-    background: var(--success);
-    color: #fff;
-  }
-
   .action-btn-reorg.confirm.confirmed {
-    background: var(--success);
-    color: #fff;
+    color: var(--success);
+    border-color: var(--success-bg);
+    background: var(--success-bg);
     cursor: default;
-  }
-
-  .action-btn-reorg.substitutos {
-    background: var(--info-bg);
-    color: var(--info);
-    border: 1px solid var(--info);
-  }
-
-  .action-btn-reorg.substitutos:hover {
-    background: var(--info);
-    color: #fff;
-  }
-
-  .action-btn-reorg.reagendar {
-    background: var(--warning-bg);
-    color: var(--warning);
-    border: 1px solid var(--warning);
-  }
-
-  .action-btn-reorg.reagendar:hover {
-    background: var(--warning);
-    color: #fff;
   }
 
   /* ── Painel de resultados dentro do card ── */

@@ -132,7 +132,7 @@ def agendamentos_futuros():
                p.fumante, p.doenca_cronica, p.complexidade_tratamento, p.photo_url
         FROM consultas c
         JOIN pacientes p ON c.paciente_id = p.id
-        WHERE c.data >= ? AND (c.status_reorganizacao IS NULL OR c.status_reorganizacao != 'reorganizada')
+        WHERE c.data >= ? AND c.status_atendimento IS NULL
         ORDER BY c.data ASC, c.horario ASC
     ''', (hoje,))
     todas_consultas = cursor.fetchall()
@@ -376,13 +376,29 @@ def gerar_agenda_ficticia():
             (data_alvo,)
         )
 
-        # Buscar pacientes reais
-        cursor.execute('SELECT id FROM pacientes ORDER BY RANDOM() LIMIT 14')
-        pacientes_ids = [r[0] for r in cursor.fetchall()]
-
-        if not pacientes_ids:
-            conn.close()
-            return jsonify({'sucesso': False, 'mensagem': 'Nenhum paciente cadastrado.'}), 400
+        # Gerar pacientes fictícios para a demo
+        fake_names = [
+            "Ana Souza", "Carlos Silva", "Beatriz Costa", "Daniel Oliveira",
+            "Eduardo Santos", "Fernanda Lima", "Gabriel Pereira", "Helena Carvalho",
+            "Igor Rodrigues", "Julia Ferreira", "Lucas Gomes", "Mariana Alves",
+            "Nicolas Ribeiro", "Olivia Martins", "Pedro Castro", "Rafaela Mendes",
+            "Tiago Barbosa", "Vitória Rocha", "Bruno Cardoso", "Camila Teixeira"
+        ]
+        
+        import uuid
+        pacientes_ids = []
+        for nome in random.sample(fake_names, min(14, len(fake_names))):
+            pid = str(uuid.uuid4())[:8].upper()
+            faixa = random.choice(['18-25', '26-35', '36-60', '60+'])
+            tipo = random.choice(['Particular', 'Convênio', 'Plano Odontológico'])
+            faltas = random.randint(0, 3)
+            cursor.execute('''
+                INSERT INTO pacientes (id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
+                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (pid, nome, faixa, tipo, faltas, round(faltas/max(faltas+5,1), 2), random.randint(1,36),
+                  random.choice([0,1]), random.choice([0,1]), random.choice(['Baixa', 'Média', 'Alta'])))
+            pacientes_ids.append(pid)
 
         horarios = [
             '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
@@ -443,7 +459,7 @@ def pacientes_lista():
                 (f'%{q}%',)
             )
         else:
-            cursor.execute('SELECT id, nome, tipo_pagamento FROM pacientes ORDER BY nome ASC LIMIT 300')
+            cursor.execute('SELECT id, nome, tipo_pagamento FROM pacientes ORDER BY nome ASC')
         rows = cursor.fetchall()
         conn.close()
         return jsonify({

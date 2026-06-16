@@ -161,7 +161,10 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
             'compatibilidade': score,
             'justificativa': _gerar_justificativa(candidato, prob_falta),
             'score': score,
-            'confianca': confianca
+            'confianca': confianca,
+            'fumante': candidato['fumante'],
+            'doenca_cronica': candidato['doenca_cronica'],
+            'complexidade_tratamento': candidato['complexidade_tratamento']
         })
 
     substitutos.sort(key=lambda x: x['score'], reverse=True)
@@ -172,7 +175,10 @@ def buscar_substitutos(consulta_id, data, horario, n=3):
         original_patient = {
             'nome': consulta_original['nome'],
             'probabilidade': 0,
-            'faltas_anteriores': consulta_original['faltas_anteriores']
+            'faltas_anteriores': consulta_original['faltas_anteriores'],
+            'fumante': consulta_original['fumante'],
+            'doenca_cronica': consulta_original['doenca_cronica'],
+            'complexidade_tratamento': consulta_original['complexidade_tratamento']
         }
         top_substitutos = ai.analyze_substitutes(original_patient, top_substitutos, data, horario)
 
