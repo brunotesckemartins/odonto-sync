@@ -511,7 +511,7 @@
       {% else %}
         <span id="pep-avatar-initials">{{ initials }}</span>
       {% endif %}
-      <div class="pep-avatar-overlay">📷</div>
+      <div class="pep-avatar-overlay">Alterar</div>
     </div>
     <input type="file" id="foto-upload" accept="image/*" style="display:none" onchange="uploadFoto(this)">
     <div class="pep-meta">
@@ -600,7 +600,6 @@
 
         <div class="field-row">
           <label for="fumante">
-            <i class="field-icon">◌</i>
             Fumante
           </label>
           <select id="fumante" name="fumante" required>
@@ -612,7 +611,6 @@
 
         <div class="field-row">
           <label for="doenca_cronica">
-            <i class="field-icon">◍</i>
             Doença Crônica
           </label>
           <select id="doenca_cronica" name="doenca_cronica" required>
@@ -624,7 +622,6 @@
 
         <div class="field-row">
           <label for="complexidade_tratamento">
-            <i class="field-icon">◈</i>
             Complexidade do Tratamento
           </label>
           <select id="complexidade_tratamento" name="complexidade_tratamento" required>
@@ -747,7 +744,6 @@
           <th>Horário</th>
           <th>Procedimento</th>
           <th>Status</th>
-          <th>Ação</th>
         </tr>
       </thead>
       <tbody>
@@ -767,12 +763,6 @@
               <span style="color:var(--text-secondary);font-weight:500;">Agendado</span>
             {% endif %}
           </td>
-          <td>
-            <button onclick="excluirConsultaPEP({{ c.id }})"
-              style="padding:0.3rem 0.7rem;background:transparent;color:var(--danger);border:1px solid var(--danger-bg);border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;transition:var(--transition);">
-              ✕
-            </button>
-          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -786,7 +776,6 @@
   <div style="background:var(--bg-primary);border:1px solid var(--border-color);border-radius:20px;box-shadow:var(--shadow-lg);width:min(540px,95vw);max-height:90vh;overflow-y:auto;animation:slideUpModal 0.25s ease;">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:1.5rem 2rem;border-bottom:1px solid var(--border-color);">
       <h2 style="font-family:var(--font-heading);font-size:1.2rem;font-weight:700;color:var(--text-primary);">Agendar Consulta</h2>
-      <button onclick="fecharModalAgendar()" style="background:none;border:none;font-size:1.4rem;color:var(--text-secondary);cursor:pointer;">&times;</button>
     </div>
     <div style="padding:1.5rem 2rem;">
       <div style="margin-bottom:1rem;padding:0.75rem 1rem;background:var(--bg-secondary);border-radius:10px;font-size:0.88rem;color:var(--text-secondary);">

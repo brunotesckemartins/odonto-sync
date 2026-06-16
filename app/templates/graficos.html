@@ -5,7 +5,7 @@
 {% block content %}
 <div class="page-header">
     <h1 class="page-title">Análise Exploratória</h1>
-    <p class="page-subtitle">Visualização de dados e métricas com leitura rápida</p>
+    <p class="page-subtitle">Visualização dinâmica de dados e métricas com leitura rápida</p>
 </div>
 
 {% if erro %}
@@ -35,25 +35,180 @@
 </div>
 
 <!-- Gráficos -->
-<div class="graficos-grid">
-    <div class="grafico">
-        <img src="data:image/png;base64,{{ graficos.falta_por_dia }}" alt="Taxa de Falta por Dia da Semana">
+<div class="graficos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 2rem; margin-top: 2rem;">
+    <div class="grafico" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <canvas id="chartDia"></canvas>
     </div>
     
-    <div class="grafico">
-        <img src="data:image/png;base64,{{ graficos.falta_por_turno }}" alt="Taxa de Falta por Turno">
+    <div class="grafico" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <canvas id="chartTurno"></canvas>
     </div>
     
-    {% if graficos.importancia_features %}
-    <div class="grafico">
-        <img src="data:image/png;base64,{{ graficos.importancia_features }}" alt="Importância das Features">
+    <div class="grafico" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <canvas id="chartDist"></canvas>
+    </div>
+
+    {% if grafico_imp %}
+    <div class="grafico" style="background: var(--bg-primary); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <canvas id="chartImp"></canvas>
     </div>
     {% endif %}
-    
-    <div class="grafico">
-        <img src="data:image/png;base64,{{ graficos.distribuicao_target }}" alt="Distribuição: Compareceu vs Faltou">
-    </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function getThemeColors() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return {
+            text: isDark ? '#f5f1ea' : '#1f1b16',
+            textSec: isDark ? '#c7bdb1' : '#5c544b',
+            grid: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'
+        };
+    }
+
+    let colors = getThemeColors();
+
+    const commonOptions = {
+        responsive: true,
+        plugins: {
+            legend: { display: false }
+        }
+    };
+
+    // Gráfico 1: Taxa de Falta por Dia
+    const chartDia = new Chart(document.getElementById('chartDia'), {
+        type: 'bar',
+        data: {
+            labels: {{ grafico_dia.labels | tojson }},
+            datasets: [{
+                label: 'Taxa de Falta (%)',
+                data: {{ grafico_dia.data | tojson }},
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgba(41, 128, 185, 1)',
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                title: { display: true, text: 'Taxa de Falta por Dia da Semana', color: colors.text }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.textSec } },
+                x: { grid: { display: false }, ticks: { color: colors.textSec } }
+            }
+        }
+    });
+
+    // Gráfico 2: Taxa de Falta por Turno
+    const chartTurno = new Chart(document.getElementById('chartTurno'), {
+        type: 'bar',
+        data: {
+            labels: {{ grafico_turno.labels | tojson }},
+            datasets: [{
+                label: 'Taxa de Falta (%)',
+                data: {{ grafico_turno.data | tojson }},
+                backgroundColor: ['rgba(52, 152, 219, 0.7)', 'rgba(243, 156, 18, 0.7)', 'rgba(231, 76, 60, 0.7)'],
+                borderWidth: 1,
+                borderRadius: 4
+            }]
+        },
+        options: {
+            ...commonOptions,
+            plugins: {
+                title: { display: true, text: 'Taxa de Falta por Turno', color: colors.text }
+            },
+            scales: {
+                y: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.textSec } },
+                x: { grid: { display: false }, ticks: { color: colors.textSec } }
+            }
+        }
+    });
+
+    // Gráfico 3: Distribuição
+    const chartDist = new Chart(document.getElementById('chartDist'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ grafico_dist.labels | tojson }},
+            datasets: [{
+                data: {{ grafico_dist.data | tojson }},
+                backgroundColor: ['rgba(46, 204, 113, 0.8)', 'rgba(231, 76, 60, 0.8)'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: colors.textSec } },
+                title: { display: true, text: 'Distribuição: Compareceu vs Faltou', color: colors.text }
+            }
+        }
+    });
+
+    const charts = [chartDia, chartTurno, chartDist];
+
+    {% if grafico_imp %}
+    // Gráfico 4: Importância Features
+    const chartImp = new Chart(document.getElementById('chartImp'), {
+        type: 'bar',
+        data: {
+            labels: {{ grafico_imp.labels | tojson }},
+            datasets: [{
+                label: 'Importância',
+                data: {{ grafico_imp.data | tojson }},
+                backgroundColor: 'rgba(155, 89, 182, 0.7)',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                title: { display: true, text: 'Principais Features do Modelo', color: colors.text }
+            },
+            scales: {
+                x: { beginAtZero: true, grid: { color: colors.grid }, ticks: { color: colors.textSec } },
+                y: { grid: { display: false }, ticks: { color: colors.textSec } }
+            }
+        }
+    });
+    charts.push(chartImp);
+    {% endif %}
+
+    // Listen for theme changes to update charts
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+        themeBtn.addEventListener('click', function() {
+            setTimeout(() => {
+                const newColors = getThemeColors();
+                charts.forEach(chart => {
+                    if (chart.options.plugins.title) {
+                        chart.options.plugins.title.color = newColors.text;
+                    }
+                    if (chart.options.plugins.legend && chart.options.plugins.legend.labels) {
+                        chart.options.plugins.legend.labels.color = newColors.textSec;
+                    }
+                    if (chart.options.scales.x) {
+                        chart.options.scales.x.ticks.color = newColors.textSec;
+                        if (chart.options.scales.x.grid) {
+                            chart.options.scales.x.grid.color = newColors.grid;
+                        }
+                    }
+                    if (chart.options.scales.y) {
+                        chart.options.scales.y.ticks.color = newColors.textSec;
+                        if (chart.options.scales.y.grid) {
+                            chart.options.scales.y.grid.color = newColors.grid;
+                        }
+                    }
+                    chart.update();
+                });
+            }, 50); // Delay slightly to allow CSS theme attribute to apply
+        });
+    }
+});
+</script>
 {% endif %}
 {% endblock %}

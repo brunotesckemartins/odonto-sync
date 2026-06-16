@@ -447,16 +447,16 @@
   </div>
   <div class="toolbar-actions">
     <button class="btn-secondary" id="btn-gerar-ficticia" onclick="abrirModalDemoData()">
-      ✦ Gerar Agenda Demo
+      Gerar Agenda Demo
     </button>
     <button class="btn-secondary" id="btn-limpar-demo" onclick="limparPacientesDemo()" title="Remover todas as consultas e pacientes demo">
-      🗑 Limpar Demo
+      Limpar Demo
     </button>
     <a href="/agendamentos-futuros" class="btn-secondary">
-      📅 Ver Futuros
+      Ver Futuros
     </a>
     <button class="btn-secondary" onclick="abrirModalCriarPaciente()">
-      ＋ Novo Paciente
+      Novo Paciente
     </button>
     <button class="btn-primary" onclick="abrirModalAgendar()">
       + Agendar Consulta
@@ -466,7 +466,7 @@
 
 {# ── Date Navigation Strip ── #}
 <div class="date-nav">
-  <label>📅 Ver agenda de:</label>
+  <label>Ver agenda de:</label>
   <div class="date-chips">
     <a href="/" class="date-chip hoje-chip {% if data_selecionada == hoje %}active{% endif %}">Hoje</a>
     {% for d in datas_disponiveis %}
