@@ -1,0 +1,415 @@
+MODELO DE RELATÓRIO FINAL
+Projeto Integrador com Inteligência Artificial
+[Nome do projeto]
+[Nome da equipe]
+[Curso / Unidade curricular]
+[Professor orientador]
+[Instituição]
+[Cidade, ano]
+Finalidade deste modelo
+Servir como estrutura-base para a entrega final do Projeto Integrador com IA.
+Indicar o que cada seção precisa conter, quais evidências devem ser anexadas e como manter coerência entre problema, dados, IA, sistema, resultados e conclusão.
+Funcionar como documento editável: os trechos entre colchetes devem ser substituídos pelo conteúdo específico do grupo.
+Sumário sugerido
+Seção
+Conteúdo esperado
+1. Introdução
+Contexto, cliente/usuário, problema, justificativa, objetivos e critérios de sucesso.
+2. Fundamentação teórica
+Base conceitual do domínio do problema, técnicas de IA e métricas de avaliação.
+3. Proposta da solução
+Descrição do sistema, papel da IA, escopo do MVP, requisitos e fluxo de uso.
+4. Dados e problema de IA
+Fontes, qualidade, preparação dos dados, aspectos éticos e formulação computacional.
+5. Metodologia
+Procedimentos de desenvolvimento, experimentação, validação e gestão do projeto.
+6. Desenvolvimento e integração
+Protótipo, arquitetura, modelo de IA, integração sistema-IA e decisões técnicas.
+7. Resultados e discussão
+Métricas, testes, validação com cliente/usuário, análise crítica, limitações e riscos.
+8. Conclusão
+Síntese do que foi entregue, atendimento aos objetivos e continuidade.
+Referências e anexos
+Referências bibliográficas, evidências, prints, atas, códigos, datasets e documentos de apoio.
+1. Introdução
+1.1 Contexto real e cliente/usuário
+Orientação: 
+Apresente o ambiente real em que o problema ocorre, quem é afetado e como o processo funciona atualmente. Evite descrever apenas um setor genérico.
+[Contexto do projeto: preencher com texto específico do projeto.]
+Evidências recomendadas
+Registro de entrevista ou conversa com cliente/usuário.
+Fotos, prints, formulários, fluxos atuais ou documentos que comprovem o contexto.
+Ata com decisões tomadas pela equipe após o levantamento inicial.
+1.2 Problema de pesquisa/problema real
+Orientação: 
+Formule o problema de modo específico, observável, investigável e viável para o semestre.
+[Problema em forma de pergunta: preencher com texto específico do projeto.]
+Critério
+Como verificar
+Especificidade
+O problema indica onde ocorre, quem é afetado e qual dificuldade será tratada?
+Mensurabilidade
+Será possível medir melhoria, desempenho, tempo, erro, acurácia, custo ou outro indicador?
+Viabilidade
+Há dados, prazo, recursos e capacidade técnica suficientes para executar o MVP?
+1.3 Justificativa
+Orientação: 
+Explique por que o projeto merece ser desenvolvido, articulando relevância prática, técnica e acadêmica.
+[Justificativa: preencher com texto específico do projeto.]
+Dimensão
+Pergunta orientadora
+Prática
+Quem se beneficia e qual problema real será reduzido?
+Técnica
+Qual tecnologia, método ou arquitetura torna a solução pertinente?
+Acadêmica
+Como o projeto demonstra aplicação fundamentada de conceitos de IA e desenvolvimento de sistemas?
+1.4 Objetivos e critérios de sucesso
+Orientação: 
+O objetivo geral deve iniciar com verbo no infinitivo. Os objetivos específicos devem funcionar como plano de execução verificável.
+[Objetivo geral: preencher com texto específico do projeto.]
+Objetivo específico
+Evidência esperada
+Critério de sucesso
+Coletar/organizar dados do problema
+Base de dados, descrição da origem e amostras
+Dados suficientes e coerentes com o problema
+Preparar os dados para IA
+Script/notebook/print de limpeza e transformação
+Dados prontos para treino/teste
+Treinar e avaliar modelo de IA
+Resultados, métricas e comparação de modelos
+Métrica adequada atingida ou analisada criticamente
+Desenvolver protótipo funcional
+Prints/telas/fluxo do sistema
+Fluxo principal funcionando
+Validar com usuário/cliente
+Registro de feedback ou teste de uso
+Utilidade e aderência avaliadas
+2. Fundamentação teórica
+Orientação: 
+Organize a teoria por eixos, e não como lista de autores. Cada conceito deve sustentar alguma decisão do projeto.
+Eixo teórico
+O que precisa conter
+Relação com o projeto
+Domínio do problema
+Conceitos sobre o setor, processo ou fenômeno estudado.
+Explica por que o problema existe e quais variáveis importam.
+Inteligência Artificial
+Técnicas, modelos e abordagem escolhida: classificação, regressão, visão computacional, NLP etc.
+Justifica por que a IA escolhida é adequada ao tipo de entrada e saída.
+Avaliação e métricas
+Métricas compatíveis com o problema: acurácia, precisão, recall, F1, MAE, RMSE etc.
+Define como o desempenho será medido e interpretado.
+Ética, dados e LGPD
+Cuidados com privacidade, consentimento, vieses e uso responsável dos dados.
+Demonstra responsabilidade técnica e social da solução.
+[Texto da fundamentação teórica: preencher com texto específico do projeto.]
+Erros a evitar
+Copiar definições sem conectar ao problema.
+Citar técnicas de IA que não serão usadas.
+Apresentar métricas sem explicar por que são adequadas.
+Ignorar limitações dos dados e riscos de viés.
+3. Proposta da solução, MVP e requisitos
+3.1 Descrição geral da solução
+Orientação: 
+Explique que sistema será desenvolvido, como o usuário interage e onde a IA entra no fluxo.
+[Descrição do sistema e da IA: preencher com texto específico do projeto.]
+3.2 Escopo do MVP
+Inclui no MVP
+Não inclui nesta versão
+[Funcionalidade essencial 1]
+[Funcionalidade futura 1]
+[Funcionalidade essencial 2]
+[Integração ou melhoria fora do prazo]
+[Componente de IA mínimo funcional]
+[Automação avançada ou versão mobile, se não for escopo]
+3.3 Requisitos iniciais/finais
+Código
+Tipo
+Descrição
+Critério de aceitação
+RF01
+Funcional
+[O sistema deve permitir ...]
+[Como será validado]
+RF02
+Funcional
+[O sistema deve processar ...]
+[Como será validado]
+RNF01
+Não funcional
+[Desempenho, segurança, usabilidade, disponibilidade etc.]
+[Limite ou condição mínima]
+RNF02
+Não funcional
+[Requisito técnico/infraestrutura]
+[Como será comprovado]
+3.4 Fluxo de uso
+Orientação: 
+Descreva o fluxo principal desde a entrada dos dados pelo usuário até a resposta produzida pelo sistema/IA.
+[Fluxo de uso em passos numerados: preencher com texto específico do projeto.]
+4. Dados e formulação do problema de IA
+4.1 Formulação computacional
+Elemento
+Descrição esperada
+Tipo de problema
+Classificação, regressão, detecção, recomendação, agrupamento, NLP, visão computacional etc.
+Entrada do modelo
+Quais dados entram no modelo: imagens, variáveis tabulares, textos, séries temporais etc.
+Saída esperada
+Classe, valor numérico, probabilidade, alerta, recomendação, segmentação etc.
+Unidade de análise
+O que cada linha/amostra representa: cliente, pedido, imagem, chamado, máquina, documento etc.
+Hipótese técnica
+Qual efeito se espera obter com IA e como isso será verificado.
+4.2 Dados utilizados
+Fonte
+Formato
+Volume
+Variáveis principais
+Limitações
+[Origem dos dados]
+[CSV, planilha, imagens, banco etc.]
+[Quantidade]
+[Variáveis/campos]
+[Ausências, ruídos, viés, baixa amostra etc.]
+[Dataset secundário, se houver]
+[Formato]
+[Quantidade]
+[Campos]
+[Limitações]
+4.3 Preparação dos dados
+Orientação: 
+Registre limpeza, padronização, transformação, divisão treino/teste, balanceamento, normalização ou extração de características.
+[Descrição da preparação: preencher com texto específico do projeto.]
+Evidências recomendadas
+Prints ou trechos de código/notebook mostrando leitura, limpeza e preparação.
+Tabela com quantidade inicial e final de amostras.
+Gráficos ou tabelas de análise exploratória.
+Registro de decisões sobre exclusões, tratamento de nulos e transformação de variáveis.
+4.4 Aspectos éticos e LGPD
+Orientação: 
+Informe se há dados pessoais/sensíveis e quais cuidados foram tomados: anonimização, consentimento, minimização, segurança e supervisão humana.
+[Cuidados éticos e legais: preencher com texto específico do projeto.]
+5. Metodologia de desenvolvimento e experimentação
+Orientação: 
+A metodologia deve explicar como o projeto foi executado, não apenas listar tarefas.
+Etapa metodológica
+Procedimento realizado
+Evidência
+Planejamento
+Definição de problema, objetivos, MVP e cronograma.
+Atas, quadro de tarefas, versão inicial do escopo.
+Dados
+Coleta, organização, limpeza e preparação.
+Base, scripts, prints, tabelas de qualidade.
+Modelagem de IA
+Treino, ajuste, comparação e seleção de modelo.
+Notebooks, métricas, gráficos, matriz de confusão ou erros.
+Sistema
+Desenvolvimento do protótipo e fluxo de uso.
+Prints, repositório, telas, commits.
+Integração
+Conexão entre sistema e IA.
+Demonstração do fluxo entrada-processamento-saída.
+Validação
+Testes técnicos, funcionais e com usuário/cliente.
+Registro de testes, feedbacks e ajustes.
+5.1 Planejamento dos experimentos
+Experimento
+Modelo/técnica
+Configuração
+Métrica
+Resultado
+E01
+[Modelo base]
+[Parâmetros/dados usados]
+[Métrica]
+[Resultado]
+E02
+[Modelo alternativo]
+[Parâmetros/dados usados]
+[Métrica]
+[Resultado]
+E03
+[Modelo final]
+[Parâmetros/dados usados]
+[Métrica]
+[Resultado]
+6. Desenvolvimento, arquitetura e integração
+6.1 Arquitetura da solução
+Orientação: 
+Mostre os componentes principais: interface, backend, banco de dados, módulo de IA, APIs e armazenamento.
+[Descrição da arquitetura e tecnologias: preencher com texto específico do projeto.]
+Componente
+Tecnologia
+Função no projeto
+Justificativa
+Interface
+[Ex.: React, Qt, mobile etc.]
+[Como o usuário interage]
+[Por que foi escolhido]
+Backend/API
+[Ex.: Python, Node, Flask, FastAPI etc.]
+[Regras, integração e processamento]
+[Justificativa]
+Banco/armazenamento
+[Ex.: PostgreSQL, SQLite, arquivos, cloud]
+[Persistência dos dados]
+[Justificativa]
+IA
+[Ex.: Scikit-learn, TensorFlow, PyTorch]
+[Treino/inferência/modelo]
+[Justificativa]
+6.2 Implementação do sistema
+[Descrição das telas, funcionalidades e protótipo: preencher com texto específico do projeto.]
+6.3 Integração sistema + IA
+Orientação: 
+Explique como a entrada do usuário chega ao modelo, como o modelo processa e como o resultado volta para o sistema.
+[Descrição da integração: preencher com texto específico do projeto.]
+Evidências recomendadas
+Print do fluxo completo funcionando.
+Print de tela de entrada e tela de saída.
+Trecho de log, API, função ou notebook que demonstre a inferência.
+Registro de erro encontrado e correção aplicada.
+7. Testes, resultados e discussão crítica
+7.1 Testes técnicos e funcionais
+Teste
+Objetivo
+Procedimento
+Resultado
+Status
+T01
+[Validar cadastro/entrada]
+[Passos do teste]
+[Resultado observado]
+[Aprovado/Ajustar]
+T02
+[Validar processamento IA]
+[Passos do teste]
+[Resultado observado]
+[Aprovado/Ajustar]
+T03
+[Validar saída/relatório/alerta]
+[Passos do teste]
+[Resultado observado]
+[Aprovado/Ajustar]
+7.2 Resultados do modelo de IA
+Orientação: 
+Apresente as métricas adequadas ao problema. Não use acurácia como única métrica se houver desbalanceamento ou diferentes custos de erro.
+Métrica
+Resultado
+Interpretação
+[Acurácia/Precisão/Recall/F1/MAE/RMSE etc.]
+[Valor]
+[O que o valor significa para o problema]
+[Métrica secundária]
+[Valor]
+[Interpretação]
+[Comparação com baseline]
+[Valor]
+[Ganho ou limitação]
+7.3 Validação com cliente/usuário
+Orientação: 
+Registre como o usuário/cliente avaliou utilidade, aderência ao problema, facilidade de uso e limitações percebidas.
+Participante
+Forma de validação
+Feedback principal
+Ajuste realizado ou planejado
+[Cliente/usuário]
+[Demonstração, entrevista, teste de uso]
+[Percepção]
+[Ajuste]
+7.4 Discussão crítica
+Orientação: 
+Explique o que funcionou, o que não funcionou, por que ocorreu e quais fatores influenciaram os resultados: dados, tempo, infraestrutura, escopo, modelo ou integração.
+[Discussão crítica dos resultados: preencher com texto específico do projeto.]
+7.5 Limitações e riscos
+Limitação/Risco
+Impacto
+Mitigação
+Dados insuficientes ou pouco representativos
+Modelo pode generalizar mal.
+Ampliar base, validar com novos dados e monitorar erros.
+Viés nos dados
+Resultados podem favorecer ou prejudicar grupos/casos.
+Auditar dados, revisar variáveis e manter supervisão humana.
+Infraestrutura limitada
+Tempo de treino/inferência ou estabilidade podem ser afetados.
+Otimizar modelo e definir escopo compatível.
+Dependência de uso correto pelo usuário
+Entradas erradas geram respostas ruins.
+Validar campos, orientar uso e registrar exceções.
+8. Conclusão e continuidade
+Orientação: 
+Retome o problema e os objetivos. Informe se foram atendidos, quais resultados sustentam essa conclusão e quais melhorias futuras são recomendadas.
+[Conclusão: preencher com texto específico do projeto.]
+Objetivo
+Foi atendido?
+Evidência que comprova
+[Objetivo específico 1]
+[Sim/Parcial/Não]
+[Evidência]
+[Objetivo específico 2]
+[Sim/Parcial/Não]
+[Evidência]
+[Objetivo específico 3]
+[Sim/Parcial/Não]
+[Evidência]
+Referências
+Orientação: 
+Liste referências acadêmicas, documentação técnica e bases de dados usadas. Padronize conforme norma solicitada pela instituição.
+[Referências em formato padronizado: preencher com texto específico do projeto.]
+Anexos e apêndices: organização das evidências
+Código
+Evidência
+Onde localizar
+Seção relacionada
+E01
+Ata/reunião de definição do problema
+[Anexo A / link / pasta]
+Introdução
+E02
+Entrevista/validação com cliente
+[Anexo B / link / pasta]
+Contexto e validação
+E03
+Base de dados e descrição
+[Anexo C / repositório]
+Dados
+E04
+Prints ou notebooks de preparação dos dados
+[Anexo D / repositório]
+Dados e metodologia
+E05
+Experimentos e métricas de IA
+[Anexo E / notebook]
+Resultados
+E06
+Prints do sistema/protótipo
+[Anexo F]
+Desenvolvimento
+E07
+Testes funcionais e correções
+[Anexo G]
+Testes
+E08
+Feedback final do cliente/usuário
+[Anexo H]
+Validação
+Checklist final de conformidade
+O problema final está claro, específico e coerente com os dados usados.
+Os objetivos foram retomados nos resultados e na conclusão.
+A fundamentação teórica justifica as escolhas técnicas.
+O MVP está delimitado e demonstra funcionamento mínimo.
+As métricas são compatíveis com o tipo de problema de IA.
+Há evidências de dados, experimentos, sistema, testes e validação.
+Limitações, riscos e melhorias futuras foram discutidos de forma crítica.
+Relatório, apresentação, código, dataset quando aplicável e anexos foram conferidos.
+Base de orientação utilizada neste modelo
+Guia Mestre do Projeto Integrador com IA
+Guia Sintético - Projeto Integrador com Inteligência Artificial (IA)
+Guia Sintético da Etapa 1 - Projeto Integrador com IA
+Guia Sintético da Etapa 2 - Projeto Integrador com IA
+Guia Sintético da Etapa 3 - Projeto Integrador com IA

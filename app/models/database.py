@@ -30,6 +30,8 @@ def _ensure_schema(conn):
             cursor.execute("ALTER TABLE pacientes ADD COLUMN complexidade_tratamento TEXT DEFAULT 'Baixa'")
         if 'photo_url' not in colunas_pacientes:
             cursor.execute("ALTER TABLE pacientes ADD COLUMN photo_url TEXT")
+        if 'lgpd_mask' not in colunas_pacientes:
+            cursor.execute("ALTER TABLE pacientes ADD COLUMN lgpd_mask INTEGER DEFAULT 1")
 
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='consultas'")
     tabela_consultas_existe = bool(cursor.fetchone())
@@ -86,6 +88,7 @@ def init_db():
             doenca_cronica INTEGER DEFAULT 0,
             complexidade_tratamento TEXT DEFAULT 'Baixa' CHECK (complexidade_tratamento IN ('Baixa', 'Média', 'Alta')),
             photo_url TEXT,
+            lgpd_mask INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -153,7 +156,7 @@ def get_paciente(paciente_id):
     conn.close()
     return paciente
 
-def listar_pacientes_para_simulacao(limit=500):
+def listar_pacientes_para_simulacao(limit=5000):
     """Lista pacientes com metadados para seleção no simulador"""
     conn = get_connection()
     cursor = conn.cursor()

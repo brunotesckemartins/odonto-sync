@@ -229,6 +229,7 @@ def criar_paciente():
         fumante = int(request.form.get('fumante', 0))
         doenca_cronica = int(request.form.get('doenca_cronica', 0))
         complexidade = request.form.get('complexidade_tratamento', 'Baixa').strip()
+        lgpd_mask = int(request.form.get('lgpd_mask', 1))
 
         if not nome:
             return jsonify({'sucesso': False, 'mensagem': 'Nome é obrigatório.'}), 400
@@ -242,11 +243,11 @@ def criar_paciente():
         cursor.execute('''
             INSERT INTO pacientes
                 (id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
-                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento, lgpd_mask)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (paciente_id, nome, faixa_etaria, tipo_pagamento, faltas,
               round(faltas / max(faltas + 5, 1), 2), random.randint(1, 36),
-              fumante, doenca_cronica, complexidade))
+              fumante, doenca_cronica, complexidade, lgpd_mask))
         conn.commit()
         conn.close()
 

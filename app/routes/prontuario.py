@@ -40,7 +40,7 @@ def visualizar_prontuario(paciente_id):
     cursor.execute('''
         SELECT id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
                taxa_historica, tempo_como_paciente, fumante,
-               doenca_cronica, complexidade_tratamento, photo_url
+               doenca_cronica, complexidade_tratamento, photo_url, lgpd_mask
         FROM pacientes
         WHERE id = ?
     ''', (paciente_id,))
@@ -65,7 +65,10 @@ def visualizar_prontuario(paciente_id):
                                error_description='Não foi possível localizar o prontuário solicitado.'), 404
 
     paciente_dict = dict(paciente)
-    paciente_dict['nome_mascarado'] = _mascarar_nome(paciente_dict.get('nome'))
+    if paciente_dict.get('lgpd_mask', 1) == 1:
+        paciente_dict['nome_mascarado'] = _mascarar_nome(paciente_dict.get('nome'))
+    else:
+        paciente_dict['nome_mascarado'] = paciente_dict.get('nome')
 
     return render_template('prontuario.html', paciente=paciente_dict, consultas=consultas, active_page='prontuario')
 
@@ -77,17 +80,38 @@ def atualizar_prontuario(paciente_id):
     complexidade_tratamento = request.form.get('complexidade_tratamento', 'Baixa')
     if complexidade_tratamento not in ('Baixa', 'Média', 'Alta'):
         complexidade_tratamento = 'Baixa'
+        
+    nome = request.form.get('nome')
+    faixa_etaria = request.form.get('faixa_etaria')
+    tipo_pagamento = request.form.get('tipo_pagamento')
+    tempo_como_paciente = request.form.get('tempo_como_paciente')
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        UPDATE pacientes
-        SET fumante = ?,
-            doenca_cronica = ?,
-            complexidade_tratamento = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    ''', (fumante, doenca_cronica, complexidade_tratamento, paciente_id))
+    
+    # We conditionally update the extra fields to not break anything if they are not provided (e.g. from an old form submit)
+    if nome and faixa_etaria and tipo_pagamento and tempo_como_paciente:
+        cursor.execute('''
+            UPDATE pacientes
+            SET fumante = ?,
+                doenca_cronica = ?,
+                complexidade_tratamento = ?,
+                nome = ?,
+                faixa_etaria = ?,
+                tipo_pagamento = ?,
+                tempo_como_paciente = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (fumante, doenca_cronica, complexidade_tratamento, nome, faixa_etaria, tipo_pagamento, int(tempo_como_paciente), paciente_id))
+    else:
+        cursor.execute('''
+            UPDATE pacientes
+            SET fumante = ?,
+                doenca_cronica = ?,
+                complexidade_tratamento = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (fumante, doenca_cronica, complexidade_tratamento, paciente_id))
     conn.commit()
     conn.close()
 

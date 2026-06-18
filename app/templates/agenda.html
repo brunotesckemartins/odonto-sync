@@ -737,6 +737,14 @@
           </select>
         </div>
       </div>
+      <div class="modal-field">
+        <label for="np-lgpd">Mascarar Nome (LGPD)</label>
+        <select id="np-lgpd">
+          <option value="1">Sim (Mascarar)</option>
+          <option value="0">Não (Mostrar Completo)</option>
+        </select>
+        <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">Se ativo, o nome será exibido como J*** S*** em algumas telas.</div>
+      </div>
       <div id="paciente-status"></div>
     </div>
     <div class="modal-footer">
@@ -920,6 +928,7 @@ async function confirmarCriarPaciente() {
   const complexidade = document.getElementById('np-complexidade').value;
   const fumante    = document.getElementById('np-fumante').value;
   const doenca     = document.getElementById('np-doenca').value;
+  const lgpd       = document.getElementById('np-lgpd').value;
   const statusEl   = document.getElementById('paciente-status');
   const btn        = document.getElementById('btn-confirmar-paciente');
 
@@ -942,6 +951,7 @@ async function confirmarCriarPaciente() {
     fd.append('complexidade_tratamento', complexidade);
     fd.append('fumante', fumante);
     fd.append('doenca_cronica', doenca);
+    fd.append('lgpd_mask', lgpd);
 
     const res  = await fetch('/criar-paciente', { method: 'POST', body: fd });
     const json = await res.json();

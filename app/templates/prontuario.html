@@ -258,7 +258,9 @@
     font-style: normal;
   }
 
-  .field-row select {
+  .field-row select,
+  .field-row input[type="text"],
+  .field-row input[type="number"] {
     width: 100%;
     padding: 0.85rem 1rem;
     background-color: var(--bg-secondary);
@@ -267,6 +269,9 @@
     font-size: 0.95rem;
     color: var(--text-primary);
     transition: var(--transition);
+  }
+
+  .field-row select {
     appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%235c544b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
     background-repeat: no-repeat;
@@ -279,7 +284,8 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23c7bdb1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   }
 
-  .field-row select:focus {
+  .field-row select:focus,
+  .field-row input:focus {
     outline: none;
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(47, 111, 109, 0.15);
@@ -597,6 +603,36 @@
       <form id="pep-form"
             method="POST"
             action="{{ url_for('prontuario.atualizar_prontuario', paciente_id=paciente.id) }}">
+
+        <div class="field-row">
+          <label for="nome">Nome do Paciente</label>
+          <input type="text" id="nome" name="nome" value="{{ paciente.nome }}" required>
+        </div>
+
+        <div class="field-row">
+          <label for="tempo_como_paciente">Tempo na clínica (meses)</label>
+          <input type="number" id="tempo_como_paciente" name="tempo_como_paciente" value="{{ paciente.tempo_como_paciente }}" min="1" max="240" required>
+        </div>
+
+        <div class="field-row">
+          <label for="faixa_etaria">Faixa Etária</label>
+          <select id="faixa_etaria" name="faixa_etaria" required>
+            <option value="0-17" {% if paciente.faixa_etaria == '0-17' %}selected{% endif %}>0–17 anos</option>
+            <option value="18-35" {% if paciente.faixa_etaria == '18-35' %}selected{% endif %}>18–35 anos</option>
+            <option value="36-60" {% if paciente.faixa_etaria == '36-60' %}selected{% endif %}>36–60 anos</option>
+            <option value="60+" {% if paciente.faixa_etaria == '60+' %}selected{% endif %}>60+ anos</option>
+          </select>
+        </div>
+
+        <div class="field-row">
+          <label for="tipo_pagamento">Tipo de Pagamento</label>
+          <select id="tipo_pagamento" name="tipo_pagamento" required>
+            <option value="Particular" {% if paciente.tipo_pagamento == 'Particular' %}selected{% endif %}>Particular</option>
+            <option value="Convênio" {% if paciente.tipo_pagamento == 'Convênio' %}selected{% endif %}>Convênio</option>
+            <option value="Plano Odontológico" {% if paciente.tipo_pagamento == 'Plano Odontológico' %}selected{% endif %}>Plano Odontológico</option>
+            <option value="SUS" {% if paciente.tipo_pagamento == 'SUS' %}selected{% endif %}>SUS</option>
+          </select>
+        </div>
 
         <div class="field-row">
           <label for="fumante">
