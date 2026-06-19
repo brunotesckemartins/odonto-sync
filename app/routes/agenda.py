@@ -395,10 +395,10 @@ def gerar_agenda_ficticia():
             faltas = random.randint(0, 3)
             cursor.execute('''
                 INSERT INTO pacientes (id, nome, faixa_etaria, tipo_pagamento, faltas_anteriores,
-                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 taxa_historica, tempo_como_paciente, fumante, doenca_cronica, complexidade_tratamento, lgpd_mask)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (pid, nome, faixa, tipo, faltas, round(faltas/max(faltas+5,1), 2), random.randint(1,36),
-                  random.choice([0,1]), random.choice([0,1]), random.choice(['Baixa', 'Média', 'Alta'])))
+                  random.choice([0,1]), random.choice([0,1]), random.choice(['Baixa', 'Média', 'Alta']), 0))
             pacientes_ids.append(pid)
 
         horarios = [
